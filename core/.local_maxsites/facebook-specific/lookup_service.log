@@ -1,0 +1,76 @@
+[INFO] Starting Facebook Lookup Service on port 5000...
+[INFO] Endpoint: http://localhost:5000/lookup?email=<email_or_phone>
+[INFO] Health check: http://localhost:5000/health
+ * Serving Flask app 'fb_lookup_service'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+/home/haymayndz/haymayndz/.local_maxsites/facebook-specific/fb_lookup_service.py:100: LeakWarning: Manually setting navigator properties is not recommended. Device information is automatically generated within Camoufox based on the provided `os`.
+If this is intentional, pass `i_know_what_im_doing=True`.
+  browser = NewBrowser(
+/home/haymayndz/haymayndz/.local_maxsites/facebook-specific/fb_lookup_service.py:100: LeakWarning: Manually setting screen & window properties is not recommended. Screen dimensions are randomly generated within Camoufox based on the provided screen constraints. See here: https://github.com/daijro/camoufox/tree/main/pythonlib#browserforge-integration.
+If this is intentional, pass `i_know_what_im_doing=True`.
+  browser = NewBrowser(
+127.0.0.1 - - [01/Dec/2025 11:23:29] "GET /lookup?email=test@gmail.com HTTP/1.1" 200 -
+/home/haymayndz/haymayndz/.local_maxsites/facebook-specific/fb_lookup_service.py:100: LeakWarning: Manually setting navigator properties is not recommended. Device information is automatically generated within Camoufox based on the provided `os`.
+If this is intentional, pass `i_know_what_im_doing=True`.
+  browser = NewBrowser(
+/home/haymayndz/haymayndz/.local_maxsites/facebook-specific/fb_lookup_service.py:100: LeakWarning: Manually setting screen & window properties is not recommended. Screen dimensions are randomly generated within Camoufox based on the provided screen constraints. See here: https://github.com/daijro/camoufox/tree/main/pythonlib#browserforge-integration.
+If this is intentional, pass `i_know_what_im_doing=True`.
+  browser = NewBrowser(
+127.0.0.1 - - [01/Dec/2025 11:24:37] "GET /lookup?email=rhemilyntan@gmail.com HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 11:25:24] "GET / HTTP/1.1" 404 -
+127.0.0.1 - - [01/Dec/2025 11:25:25] "GET /favicon.ico HTTP/1.1" 404 -
+127.0.0.1 - - [01/Dec/2025 11:28:42] "GET /lookup?email=rhemilyntan@gmail.com HTTP/1.1" 200 -
+/home/haymayndz/haymayndz/.local_maxsites/facebook-specific/fb_lookup_service.py:100: LeakWarning: Manually setting navigator properties is not recommended. Device information is automatically generated within Camoufox based on the provided `os`.
+If this is intentional, pass `i_know_what_im_doing=True`.
+  browser = NewBrowser(
+/home/haymayndz/haymayndz/.local_maxsites/facebook-specific/fb_lookup_service.py:100: LeakWarning: Manually setting screen & window properties is not recommended. Screen dimensions are randomly generated within Camoufox based on the provided screen constraints. See here: https://github.com/daijro/camoufox/tree/main/pythonlib#browserforge-integration.
+If this is intentional, pass `i_know_what_im_doing=True`.
+  browser = NewBrowser(
+127.0.0.1 - - [01/Dec/2025 11:31:00] "GET /lookup?email=haymayndz HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 11:37:06] "GET /lookup?email=rhemilyntan@gmail.com HTTP/1.1" 200 -
+============================================================
+Facebook Profile Lookup Service v2
+Using m.facebook.com (mobile version)
+============================================================
+[INFO] Endpoint: http://localhost:5000/lookup?email=<email_or_phone>
+[INFO] Health: http://localhost:5000/health
+[INFO] Clear cache: POST http://localhost:5000/clear-cache
+============================================================
+ * Serving Flask app 'fb_lookup_service'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+127.0.0.1 - - [01/Dec/2025 11:53:44] "GET /health HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 11:54:21] "GET /lookup?email=rhemilyntan@gmail.com HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 11:55:00] "GET /lookup?email=haymayndz HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 11:55:59] "GET /lookup?email=dats.dats.672841 HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 11:56:43] "GET /lookup?email=%2B639065527131 HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 11:56:50] "GET /lookup?email=09537184498 HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 11:57:45] "GET /lookup?email=rhemilyntan@gmail.com HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 11:58:45] "GET /lookup?email=09537184498 HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 12:01:22] "GET /lookup?email=09065527131 HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 12:01:38] "GET /lookup?email=09065527131 HTTP/1.1" 200 -
+============================================================
+Facebook Profile Lookup Service v2
+Using m.facebook.com (mobile version)
+============================================================
+[INFO] Endpoint: http://localhost:5000/lookup?email=<email_or_phone>
+[INFO] Health: http://localhost:5000/health
+[INFO] Clear cache: POST http://localhost:5000/clear-cache
+============================================================
+ * Serving Flask app 'fb_lookup_service'
+ * Debug mode: off
+WARNING: This is a development server. Do not use it in a production deployment. Use a production WSGI server instead.
+ * Running on http://127.0.0.1:5000
+Press CTRL+C to quit
+127.0.0.1 - - [01/Dec/2025 12:03:22] "GET /health HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 12:03:33] "GET /lookup?email=09537184498 HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 12:03:42] "POST /clear-cache HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 12:03:58] "GET /lookup?email=09537184498 HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 12:03:59] "GET /lookup?email=09537184498 HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 12:05:04] "GET /lookup?email=09537184498 HTTP/1.1" 200 -
+127.0.0.1 - - [01/Dec/2025 12:06:58] "GET /lookup?email=09537184498 HTTP/1.1" 200 -

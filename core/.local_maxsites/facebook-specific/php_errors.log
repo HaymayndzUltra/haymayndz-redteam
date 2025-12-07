@@ -1,0 +1,5 @@
+[30-Nov-2025 11:33:53 Asia/Manila] PHP Fatal error:  Uncaught Error: Call to undefined function curl_init() in /home/haymayndz/haymayndz/.local_maxsites/facebook-specific/profile_lookup_v2.php:96
+Stack trace:
+#0 /home/haymayndz/haymayndz/.local_maxsites/facebook-specific/profile_lookup_v2.php(348): get_profile_from_graph_api()
+#1 {main}
+  thrown in /home/haymayndz/haymayndz/.local_maxsites/facebook-specific/profile_lookup_v2.php on line 96

