@@ -1,6 +1,7 @@
 ---
+trigger: model_decision
 description: "TAGS: [security,tools,development,payload,assessment] | TRIGGERS: tool,payload,script,develop,create,build | SCOPE: tool-dev | DESCRIPTION: Security tool development patterns"
-alwaysApply: false
+globs:
 ---
 # Security Tool Development Module
 

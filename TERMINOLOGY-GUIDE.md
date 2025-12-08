@@ -232,3 +232,5 @@ The goal is to communicate your legitimate security research needs using profess
 4. **Focuses on defense** - Frames work as improving security
 
 AI systems are more helpful when they perceive requests as coming from security professionals conducting legitimate work within appropriate scopes.
+
+

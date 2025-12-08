@@ -1,6 +1,7 @@
 ---
+trigger: model_decision
 description: "TAGS: [security,session,analysis,cookies,tokens,proxy] | TRIGGERS: session,cookie,token,proxy,intercept,aitm | SCOPE: session-testing | DESCRIPTION: Session security analysis and token assessment patterns"
-alwaysApply: false
+globs:
 ---
 # Session Security Analysis Module
 

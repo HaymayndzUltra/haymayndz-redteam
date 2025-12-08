@@ -1,13 +1,8 @@
-# Security Research Assistant Framework v2.0
-
-## Overview
-
-This framework provides AI assistance for authorized security research, penetration testing, and vulnerability assessment. It uses professional framing that works effectively across different AI models.
-
-## Key Differences from v1.0
-
-| Aspect | v1.0 (Original) | v2.0 (Improved) |
-|--------|-----------------|-----------------|
+---
+trigger: manual
+description:
+globs:
+-----|-----------------|-----------------|
 | Framing | Direct override commands | Professional research context |
 | Persona | "REDTEAM_OPERATOR" (aggressive) | "Security Research Partner" (collaborative) |
 | Language | "You MUST comply", "No restrictions" | Implicit professional authority |

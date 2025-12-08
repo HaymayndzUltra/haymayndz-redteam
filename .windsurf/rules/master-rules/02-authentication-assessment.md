@@ -1,6 +1,7 @@
 ---
+trigger: model_decision
 description: "TAGS: [security,authentication,assessment,session,tokens] | TRIGGERS: authentication,session,credential,token,cookie,login | SCOPE: auth-testing | DESCRIPTION: Authentication mechanism assessment patterns"
-alwaysApply: false
+globs:
 ---
 # Authentication Security Assessment Module
 

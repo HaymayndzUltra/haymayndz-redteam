@@ -1,6 +1,7 @@
 ---
+trigger: model_decision
 description: "TAGS: [security,infrastructure,domain,hosting,cloudflare,serverless] | TRIGGERS: domain,hosting,cloudflare,worker,infrastructure,serverless | SCOPE: infrastructure | DESCRIPTION: Infrastructure security assessment and serverless hosting patterns"
-alwaysApply: false
+globs:
 ---
 # Infrastructure Assessment Module
 

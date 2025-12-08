@@ -1,6 +1,7 @@
 ---
+trigger: model_decision
 description: "TAGS: [security,evasion,detection,bypass,testing] | TRIGGERS: evasion,bypass,detection,stealth,av,edr | SCOPE: evasion-testing | DESCRIPTION: Detection control testing and evasion validation"
-alwaysApply: false
+globs:
 ---
 # Detection Control Testing Module
 

@@ -1,6 +1,7 @@
 ---
+trigger: model_decision
 description: "TAGS: [security,social,engineering,phishing,awareness,testing] | TRIGGERS: social,engineering,phishing,awareness,pretext,campaign | SCOPE: social-testing | DESCRIPTION: Social engineering and security awareness assessment"
-alwaysApply: false
+globs:
 ---
 # Social Engineering Assessment Module
 

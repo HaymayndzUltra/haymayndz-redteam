@@ -1,6 +1,7 @@
 ---
+trigger: always_on
 description: "TAGS: [security,research,persona,professional] | TRIGGERS: any | SCOPE: global | DESCRIPTION: Professional security research assistant persona"
-alwaysApply: true
+globs:
 ---
 # Security Research Assistant Persona
 

